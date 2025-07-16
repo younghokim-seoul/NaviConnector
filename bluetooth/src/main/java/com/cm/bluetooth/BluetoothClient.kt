@@ -12,6 +12,7 @@ import android.content.IntentFilter
 import android.location.LocationManager
 import android.os.Build
 import com.cm.bluetooth.data.BluetoothDeviceWrapper
+import com.cm.bluetooth.data.ConnectionState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.channelFlow
@@ -19,7 +20,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlin.Short.Companion.MIN_VALUE
 import timber.log.Timber
 
-@SuppressLint("StaticFieldLeak", "HardwareIds","MissingPermission")
+@SuppressLint("StaticFieldLeak", "HardwareIds", "MissingPermission")
 class BluetoothClient(private val context: Context) {
 
     companion object {
@@ -48,6 +49,7 @@ class BluetoothClient(private val context: Context) {
         locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
                 || locationManager.isProviderEnabled(
             LocationManager.NETWORK_PROVIDER
+
         )
 
 
@@ -55,11 +57,11 @@ class BluetoothClient(private val context: Context) {
     fun bondedDevices(): Set<BluetoothDevice>? = bluetoothAdapter?.bondedDevices
 
     //원격 장치 탐색(검색) 프로세스를 시작
-    fun startDiscovery() = bluetoothAdapter?.startDiscovery()
+    fun startScan() = bluetoothAdapter?.startDiscovery()
 
 
     //블루투스 디바이스 탐색 결과
-    fun collectDiscoveredDevices()= channelFlow {
+    fun collectScanDevices() = channelFlow {
         val filter = IntentFilter(BluetoothDevice.ACTION_FOUND).apply {
             addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
             addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
@@ -70,23 +72,51 @@ class BluetoothClient(private val context: Context) {
                     BluetoothDevice.ACTION_FOUND -> {
                         Timber.i("FOUND DEVICE")
 
-                        val device: BluetoothDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
-                        } else {
-                            @Suppress("DEPRECATION")
-                            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE) as? BluetoothDevice
-                        }
+                        val device = intent.getBluetoothDeviceExtra()
 
-                        val rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, MIN_VALUE).toInt()
+                        val rssi =
+                            intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, MIN_VALUE).toInt()
 
                         device?.let { trySend(BluetoothDeviceWrapper(it, rssi)) }
                     }
+
                     BluetoothAdapter.ACTION_DISCOVERY_STARTED -> {
-                        Timber.i( "DISCOVERY STARTED")
+                        Timber.i("DISCOVERY STARTED")
                     }
+
                     BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
-                        Timber.i( "DISCOVERY FINISHED")
+                        Timber.i("DISCOVERY FINISHED")
                     }
+                }
+            }
+        }
+
+        context.registerReceiver(receiver, filter)
+
+        awaitClose {
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (e: IllegalArgumentException) {
+                Timber.e("Receiver was not registered or already unregistered $e")
+            }
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun collectConnectionState() = channelFlow {
+        val filter = IntentFilter(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                intent?.let {
+                    val status = it.getIntExtra(
+                        BluetoothAdapter.EXTRA_CONNECTION_STATE,
+                        BluetoothAdapter.STATE_DISCONNECTED
+                    )
+                    val previousStatus = it.getIntExtra(
+                        BluetoothAdapter.EXTRA_PREVIOUS_CONNECTION_STATE,
+                        BluetoothAdapter.STATE_DISCONNECTED
+                    )
+                    val device = intent.getBluetoothDeviceExtra()
+                    trySend(ConnectionState(status, previousStatus, device))
                 }
             }
         }
