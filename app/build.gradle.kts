@@ -11,8 +11,8 @@ android {
 
     defaultConfig {
         applicationId = "com.cm.naviconnector"
-        versionCode = com.skydoves.pokedex.Configuration.versionCode
-        versionName = com.skydoves.pokedex.Configuration.versionName
+        versionCode = com.cm.naviconnector.Configuration.versionCode
+        versionName = com.cm.naviconnector.Configuration.versionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
