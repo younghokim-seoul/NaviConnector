@@ -21,7 +21,7 @@ plugins {
 }
 
 android {
-    minSdk = 23
+    minSdk = 28
     compileSdk = 35
 }
 
