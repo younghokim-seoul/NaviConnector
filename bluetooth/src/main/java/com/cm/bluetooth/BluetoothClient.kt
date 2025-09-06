@@ -10,7 +10,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.location.LocationManager
-import android.os.Build
 import com.cm.bluetooth.data.BluetoothDeviceWrapper
 import com.cm.bluetooth.data.ConnectionState
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +39,8 @@ class BluetoothClient(private val context: Context) {
     val bluetoothAdapter = bluetoothManager?.adapter
 
 
-    var bluetoothSocket: BluetoothSocket? = null
+    var activeBluetoothSocket: BluetoothSocket? = null
+    var bluetoothIO: BluetoothIO? = null
 
     fun isBluetoothAvailable() = bluetoothAdapter != null && bluetoothAdapter.address.isNotEmpty()
     fun isBluetoothEnabled() = bluetoothAdapter?.isEnabled
@@ -51,6 +51,15 @@ class BluetoothClient(private val context: Context) {
             LocationManager.NETWORK_PROVIDER
 
         )
+
+    fun getWorker(bluetoothSocket: BluetoothSocket): BluetoothIO? {
+        if (bluetoothIO?.bluetoothSocket === bluetoothSocket) {
+            return bluetoothIO
+        }
+        activeBluetoothSocket = bluetoothSocket
+        bluetoothIO = BluetoothIO(bluetoothSocket)
+        return bluetoothIO
+    }
 
 
     //이미 페어링(연결/등록)된 블루투스 기기들의 목록
@@ -74,8 +83,7 @@ class BluetoothClient(private val context: Context) {
 
                         val device = intent.getBluetoothDeviceExtra()
 
-                        val rssi =
-                            intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, MIN_VALUE).toInt()
+                        val rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, MIN_VALUE).toInt()
 
                         device?.let { trySend(BluetoothDeviceWrapper(it, rssi)) }
                     }
