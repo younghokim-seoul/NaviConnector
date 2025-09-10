@@ -75,4 +75,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation(libs.timber)
+
+    implementation("me.tankery.lib:circularSeekBar:1.4.2")
 }
