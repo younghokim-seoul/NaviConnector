@@ -6,17 +6,21 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import me.tankery.lib.circularseekbar.CircularSeekBar
+import kotlin.math.cos
+import kotlin.math.sin
 
 @Composable
 fun CircularDial(
@@ -25,22 +29,28 @@ fun CircularDial(
     modifier: Modifier = Modifier,
     min: Int = 0,
     max: Int = 10,
-    outerSize: Dp = 220.dp,       // 가장 큰 원
-    innerSize: Dp = 100.dp,       // 숫자 텍스트 원
-    ringWidth: Dp = 32.dp,        // 링 두께(노브가 도는 구간)
-    ringMargin: Dp = 15.dp,        // 링과 내부 원 사이의 간격
-    activeColor: Color = Color.Transparent, // 진행률 색상
-    inactiveRingColor: Color = Color.White, // 링 배경
-    numberColor: Color = Color(0xFFCC6B6B),         // 중앙 숫자
+    outerSize: Dp = 220.dp,        // 가장 큰 원
+    innerSize: Dp = 100.dp,        // 중앙 숫자 원 지름
+    ringWidth: Dp = 32.dp,         // 링 두께
+    ringMargin: Dp = 15.dp,        // 중앙 원과 링 사이 간격
+    activeColor: Color = Color.Transparent, // 진행 링 색
+    inactiveRingColor: Color = Color.White, // 링 배경 색
+    numberColor: Color = Color(0xFFCC6B6B), // 중앙 숫자 색
+    knobScale: Float = 0.82f,      // 노브 지름 = ringWidth * knobScale
+    startAngleDeg: Float = 0f,     // ★ tankery 기본과 동일: 0°(오른쪽) 시작
+    clockwise: Boolean = true      // tankery 기본: 시계방향
 ) {
     val context = LocalContext.current
-    val seekSize = innerSize + (ringWidth + ringMargin) * 2  // 시크바 뷰는 두 원 사이에 정확히 들어가도록
+    val density = LocalDensity.current
+
+    // 링 뷰 크기: 중앙 원 + (링두께 + 마진) * 2
+    val seekSize = innerSize + (ringWidth + ringMargin) * 2
 
     Box(
         modifier = modifier.size(outerSize),
         contentAlignment = Alignment.Center
     ) {
-        // 바깥 큰 원(부드러운 그림자 느낌)
+        // 바깥 큰 원
         Surface(
             modifier = Modifier.fillMaxSize(),
             shape = CircleShape,
@@ -49,36 +59,30 @@ fun CircularDial(
             shadowElevation = 10.dp
         ) {}
 
-        // 시크바(원형 링 + 노브) - 두 원 사이에 위치
+        // tankery: 링 + 터치 계산만 사용(포인터는 숨김)
         AndroidView(
             modifier = Modifier.size(seekSize),
             factory = { ctx ->
                 CircularSeekBar(ctx).apply {
-                    // (중요) 범위 확실히: 0..10
                     this.max = max.toFloat()
+                    progress = value.toFloat()
 
-                    // 진행 색/배경
                     circleColor = inactiveRingColor.toArgb()
                     circleProgressColor = activeColor.toArgb()
-
-                    // ★ 노브: 완전 흰색 + 그림자(halo)
-                    pointerColor = Color.White.toArgb()
-                    pointerHaloColor = Color.Black.copy(alpha = 0.22f).toArgb() // 부드러운 그림자
-//                    pointerRadius = (ringWidth * 0.68f).toPx(ctx)               // 노브 크기
-//                    pointerHaloWidth = (ringWidth * 0.90f).toPx(ctx)            // 그림자/후광 두께
-
-                    // 링/끝처리
                     circleStrokeWidth = ringWidth.toPx(ctx)
                     circleStyle = Paint.Cap.ROUND
 
-                    // 터치 on (노브 조작용)
-//                    isTouchEnabled = true
+                    // 포인터는 숨김(겹침/오프셋 문제 방지)
+                    pointerColor = Color.Transparent.toArgb()
+                    pointerHaloColor = Color.Transparent.toArgb()
 
-                    progress = value.toFloat()
+//                    isTouchEnabled = true
                     setOnSeekBarChangeListener(object :
                         CircularSeekBar.OnCircularSeekBarChangeListener {
                         override fun onProgressChanged(
-                            circularSeekBar: CircularSeekBar?, progress: Float, fromUser: Boolean
+                            circularSeekBar: CircularSeekBar?,
+                            progress: Float,
+                            fromUser: Boolean
                         ) {
                             if (fromUser) onValueChange(progress.toInt().coerceIn(min, max))
                         }
@@ -90,21 +94,58 @@ fun CircularDial(
             update = { view ->
                 if (view.progress.toInt() != value) view.progress = value.toFloat()
                 if (view.max.toInt() != max) view.max = max.toFloat()
-
-                // 동적 색 반영 시
                 view.circleColor = inactiveRingColor.toArgb()
                 view.circleProgressColor = activeColor.toArgb()
-
-                // 노브/그림자 보정(테마 변경 시)
-                view.pointerColor = Color.White.toArgb()
-                view.pointerHaloColor = Color.Black.copy(alpha = 0.22f).toArgb()
-//                view.pointerRadius = (ringWidth * 0.68f).toPx(view.context)
-//                view.pointerHaloWidth = (ringWidth * 0.90f).toPx(view.context)
+                view.circleStrokeWidth = ringWidth.toPx(view.context)
+                view.circleStyle = Paint.Cap.ROUND
+                view.pointerColor = Color.Transparent.toArgb()
+                view.pointerHaloColor = Color.Transparent.toArgb()
             }
         )
 
+        // ===== Compose 오버레이 노브(흰색 + 그림자), 내접 트랙 중앙선 위 배치 =====
+        val outerPx = with(density) { outerSize.toPx() }
+        val innerPx = with(density) { innerSize.toPx() }
+        val ringWidthPx = with(density) { ringWidth.toPx() }
+        val ringMarginPx = with(density) { ringMargin.toPx() }
 
-        // 안쪽 숫자 원
+        // 트랙 반지름(노브 중심 궤도) = inner/2 + margin + ringWidth/2
+        val trackRadiusPx = innerPx / 2f + ringMarginPx + ringWidthPx / 2f
+
+        // 노브 크기: 링 두께 대비 비율
+        val knobDiameter = ringWidth * knobScale
+        val knobDiameterPx = with(density) { knobDiameter.toPx() }
+        val knobRadiusPx = knobDiameterPx / 2f
+
+        // progress -> angle: tankery 기본과 동일 매핑
+        val range = (max - min).coerceAtLeast(1)
+        val fraction = ((value - min).toFloat() / range.toFloat()).coerceIn(0f, 1f)
+        val signed = if (clockwise) +360f else -360f
+        val angleDeg = startAngleDeg + signed * fraction
+        val theta = Math.toRadians(angleDeg.toDouble())
+
+        // Box(outerSize) 중심 기준 좌표
+        val center = outerPx / 2f
+        val knobCx = (center + cos(theta) * trackRadiusPx).toFloat()
+        val knobCy = (center + sin(theta) * trackRadiusPx).toFloat()
+
+        // 흰색 노브 + 그림자 (오버레이)
+        Surface(
+            modifier = Modifier
+                .size(knobDiameter)
+                .offset {
+                    IntOffset(
+                        (knobCx - knobRadiusPx).toInt(),
+                        (knobCy - knobRadiusPx).toInt()
+                    )
+                },
+            shape = CircleShape,
+            color = Color.White,
+            tonalElevation = 0.dp,
+            shadowElevation = 8.dp
+        ) {}
+
+        // 중앙 숫자 원
         Surface(
             modifier = Modifier.size(innerSize),
             shape = CircleShape,

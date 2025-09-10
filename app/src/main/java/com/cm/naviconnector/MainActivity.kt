@@ -4,8 +4,19 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -14,6 +25,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,9 +41,8 @@ import com.cm.naviconnector.ui.design.AppBackground
 import com.cm.naviconnector.ui.design.CircleButton
 import com.cm.naviconnector.ui.design.PlaylistPanel
 import com.cm.naviconnector.ui.design.TopBar
+import com.cm.naviconnector.ui.dial.CircularDial
 import com.cm.naviconnector.ui.theme.NaviConnectorTheme
-import com.vivek.seeker.Seeker
-import com.vivek.seeker.SeekerDefaults
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
@@ -77,15 +90,18 @@ fun MainScreen(uiState: AppUiState, onEvent: (AppEvent) -> Unit) {
 
         val currentFeatureState = uiState.features[uiState.currentFeature]
         val dialColor = if (currentFeatureState?.isActive == true) activeColor else inactiveColor
-        
-        Seeker(
-            value = currentFeatureState?.level?.toFloat() ?: 0f,
-            range = 0f..10f,
-            onValueChange = { onEvent(AppEvent.OnDialChanged(it.toInt())) },
-            colors = SeekerDefaults.seekerColors(trackColor = inactiveColor, progressColor = dialColor),
-            modifier = Modifier.size(200.dp)
-        ) { 
-            Text(text = "${currentFeatureState?.level ?: 0}")
+
+        var level by remember { mutableIntStateOf(10) }
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFEFF2FF)),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularDial(
+                value = level,
+                onValueChange = { level = it }
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
