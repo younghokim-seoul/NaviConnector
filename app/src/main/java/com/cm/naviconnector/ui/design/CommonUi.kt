@@ -3,8 +3,16 @@ package com.cm.naviconnector.ui.design
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,13 +25,15 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cm.naviconnector.ui.theme.LightBlueish
+import com.cm.naviconnector.ui.theme.LightPurple
 
 @Composable
 fun TopBar() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 32.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -45,15 +55,21 @@ fun CircleButton(
         modifier = modifier
             .size(60.dp)
             .clip(CircleShape)
+            .background(Color.White)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick,
                 enabled = enabled
             )
-            .padding(12.dp),
+            .padding(14.dp),
         contentAlignment = Alignment.Center
     ) {
-        Icon(painter = painter, contentDescription = null, tint = if (enabled) tint else Color.Gray, modifier = Modifier.fillMaxSize())
+        Icon(
+            painter = painter,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 
@@ -61,12 +77,11 @@ fun CircleButton(
 fun PlaylistPanel(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .height(100.dp)
-            .background(Color.DarkGray.copy(alpha = 0.2f))
-            .padding(8.dp),
+            .height(148.dp)
+            .background(Color.White, shape = RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center
     ) {
-        Text("PLAY LIST", color = Color.Gray)
+        Text("PLAY LIST", fontSize = 16.sp, color = Color.Black, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -78,8 +93,8 @@ fun AppBackground(content: @Composable () -> Unit) {
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFFF5F5F5), // whitesmoke
-                        Color(0xFFE6E6FA)  // lavender
+                        LightBlueish,
+                        LightPurple
                     )
                 )
             )

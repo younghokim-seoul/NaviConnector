@@ -1,4 +1,4 @@
-package com.cm.naviconnector.feature.control
+package com.cm.naviconnector.feature
 
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,32 +19,40 @@ class MainViewModel : ViewModel() {
                     val newFeatures = currentState.features.toMutableMap()
                     val featureState = newFeatures[event.feature]
                     if (featureState != null) {
-                        newFeatures[event.feature] = featureState.copy(enabled = !featureState.enabled)
+                        newFeatures[event.feature] =
+                            featureState.copy(enabled = !featureState.enabled)
                     }
                     currentState.copy(currentFeature = event.feature, features = newFeatures)
                 }
             }
+
             is AppEvent.OnDialChanged -> {
                 if (!_uiState.value.isConnected) return
                 _uiState.update { currentState ->
                     val newFeatures = currentState.features.toMutableMap()
                     val currentFeatureState = newFeatures[currentState.currentFeature]
                     if (currentFeatureState != null && currentFeatureState.enabled) {
-                        newFeatures[currentState.currentFeature] = currentFeatureState.copy(level = event.level)
+                        newFeatures[currentState.currentFeature] =
+                            currentFeatureState.copy(level = event.level)
                     }
                     currentState.copy(features = newFeatures)
                 }
             }
+
             AppEvent.OnBtLongPress -> {
                 _uiState.update { it.copy(showDeviceListDialog = true) }
             }
+
             is AppEvent.OnDeviceChosen -> {
                 _uiState.update { it.copy(isConnected = true, showDeviceListDialog = false) }
             }
+
             AppEvent.OnDismissDeviceDialog -> {
                 _uiState.update { it.copy(showDeviceListDialog = false) }
             }
+
             AppEvent.OnPlayClicked -> _uiState.update { it.copy(isPlaying = true) }
+
             AppEvent.OnPauseClicked -> _uiState.update { it.copy(isPlaying = false) }
         }
     }
