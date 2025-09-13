@@ -1,15 +1,20 @@
 package com.cm.naviconnector
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.lifecycleScope
 import com.cm.naviconnector.ui.MainScreen
 import com.cm.naviconnector.ui.design.AppBackground
 import com.cm.naviconnector.ui.theme.NaviConnectorTheme
+import com.gun0912.tedpermission.coroutine.TedPermission
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -18,12 +23,43 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        checkPermissions()
+
         setContent {
             NaviConnectorTheme {
                 val uiState by viewModel.uiState.collectAsState()
                 AppBackground {
                     MainScreen(uiState = uiState, onEvent = viewModel::onEvent)
                 }
+            }
+        }
+    }
+
+    private fun checkPermissions() {
+        lifecycleScope.launch {
+            val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                )
+            } else {
+                arrayOf(
+                    Manifest.permission.BLUETOOTH,
+                    Manifest.permission.BLUETOOTH_ADMIN,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                )
+            }
+
+            val permissionResult = TedPermission.create()
+                .setPermissions(*permissions)
+                .setDeniedMessage("권한을 거부하셨습니다.\n[설정] > [권한]에서 직접 권한을 허용해주세요.")
+                .check()
+
+            if (permissionResult.isGranted) {
+                viewModel.startScan()
+            } else {
+                finish()
             }
         }
     }
