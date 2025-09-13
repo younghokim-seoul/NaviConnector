@@ -1,6 +1,7 @@
 package com.cm.naviconnector.ui.design
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,9 +23,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cm.naviconnector.R
 import com.cm.naviconnector.ui.theme.LightBlueish
 import com.cm.naviconnector.ui.theme.LightPurple
 
@@ -37,7 +40,10 @@ fun TopBar() {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = "NABI&JJONG", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Image(
+            painter = painterResource(id = R.drawable.nabi_jjong),
+            contentDescription = "NABI&JJONG Logo"
+        )
     }
 }
 

@@ -1,6 +1,7 @@
 package com.cm.naviconnector.feature
 
-import com.cm.naviconnector.R
+import com.cm.naviconnector.feature.control.Feature
+import com.cm.naviconnector.feature.control.FeatureState
 
 data class AppUiState(
     val currentFeature: Feature = Feature.FAN,
@@ -12,18 +13,4 @@ data class AppUiState(
     val powerActive: Boolean = features[Feature.HEAT]?.isActive == true ||
             features[Feature.AUDIO]?.isActive == true ||
             features[Feature.FILM]?.isActive == true
-}
-
-enum class Feature(val resourceId: Int) {
-    HEAT(R.drawable.heater),
-    AUDIO(R.drawable.audio),
-    FAN(R.drawable.fan),
-    FILM(R.drawable.film)
-}
-
-data class FeatureState(
-    val level: Int = 0,
-    val enabled: Boolean = false
-) {
-    val isActive: Boolean get() = enabled && level >= 1
 }

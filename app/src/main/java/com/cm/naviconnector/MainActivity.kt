@@ -33,8 +33,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
-import com.cm.naviconnector.feature.Feature
 import com.cm.naviconnector.feature.MainViewModel
+import com.cm.naviconnector.feature.control.Feature
+import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.ui.design.AppBackground
 import com.cm.naviconnector.ui.design.CircleButton
 import com.cm.naviconnector.ui.design.PlaylistPanel
@@ -81,31 +82,29 @@ fun MainScreen(uiState: AppUiState, onEvent: (AppEvent) -> Unit) {
         Spacer(modifier = Modifier.height(36.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            CircleButton(
-                painter = painterResource(id = R.drawable.power),
-                onClick = {},
-                enabled = uiState.powerActive,
-                tint = if (uiState.powerActive) activeColor else inactiveColor
-            )
-            CircleButton(
-                painter = painterResource(id = R.drawable.bluetooth),
-                onClick = {},
-                onLongClick = { onEvent(AppEvent.OnBtLongPress) },
-                enabled = true,
-                tint = if (uiState.isConnected) activeColor else inactiveColor
-            )
-            CircleButton(
-                painter = painterResource(id = R.drawable.wifi),
-                onClick = {},
-                enabled = uiState.isConnected,
-                tint = if (uiState.isConnected) activeColor else inactiveColor
-            )
-            CircleButton(
-                painter = painterResource(id = R.drawable.upload),
-                onClick = {},
-                enabled = uiState.isConnected,
-                tint = if (uiState.isConnected) activeColor else inactiveColor
-            )
+            TopButtonType.entries.forEach { buttonType ->
+                val tint = when (buttonType) {
+                    TopButtonType.POWER -> if (uiState.powerActive) activeColor else inactiveColor
+                    else -> if (uiState.isConnected) activeColor else inactiveColor
+                }
+                val enabled = when (buttonType) {
+                    TopButtonType.POWER -> uiState.powerActive
+                    TopButtonType.BLUETOOTH -> true
+                    else -> uiState.isConnected
+                }
+
+                CircleButton(
+                    painter = painterResource(id = buttonType.icon),
+                    onClick = {
+                        // TODO: Handle top button clicks
+                    },
+                    onLongClick = if (buttonType == TopButtonType.BLUETOOTH) {
+                        { onEvent(AppEvent.OnBtLongPress) }
+                    } else null,
+                    enabled = enabled,
+                    tint = tint
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(40.dp))
@@ -129,7 +128,7 @@ fun MainScreen(uiState: AppUiState, onEvent: (AppEvent) -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             Feature.entries.forEach { feature ->
                 CircleButton(
-                    painter = painterResource(id = feature.resourceId),
+                    painter = painterResource(id = feature.icon),
                     onClick = { onEvent(AppEvent.OnFeatureTapped(feature)) },
                     tint = dialColor,
                     enabled = uiState.isConnected
