@@ -16,9 +16,11 @@ appcompat = "1.7.1"
 material = "1.12.0"
 coroutines = "1.10.2"
 timber = "5.0.1"
+circularseekbar = "1.4.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+circularseekbar = { module = "me.tankery.lib:circularSeekBar", version.ref = "circularseekbar" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

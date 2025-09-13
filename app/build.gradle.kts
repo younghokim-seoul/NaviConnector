@@ -76,5 +76,5 @@ dependencies {
 
     implementation(libs.timber)
 
-    implementation("me.tankery.lib:circularSeekBar:1.4.2")
+    implementation(libs.circularseekbar)
 }
