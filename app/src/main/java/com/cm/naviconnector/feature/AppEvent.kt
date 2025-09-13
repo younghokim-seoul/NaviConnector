@@ -1,5 +1,7 @@
 package com.cm.naviconnector.feature
 
+import com.cm.naviconnector.feature.control.Feature
+
 sealed interface AppEvent {
     data class OnFeatureTapped(val feature: Feature) : AppEvent
     data class OnDialChanged(val level: Int) : AppEvent
