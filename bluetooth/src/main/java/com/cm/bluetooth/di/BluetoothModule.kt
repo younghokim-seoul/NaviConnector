@@ -16,6 +16,6 @@ object BluetoothModule {
     @Provides
     @ActivityRetainedScoped
     fun provideBluetoothClient(@ApplicationContext context: Context): BluetoothClient {
-        return BluetoothClient(context)
+        return BluetoothClient.getInstance(context)
     }
 }

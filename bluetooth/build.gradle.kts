@@ -13,8 +13,8 @@ android {
 dependencies {
 
     // coroutines
-    implementation(libs.coroutines)
-    testImplementation(libs.coroutines)
+    implementation(libs.coroutines.android)
+    testImplementation(libs.coroutines.android)
     testImplementation(libs.coroutines.test)
 
     implementation(libs.timber)

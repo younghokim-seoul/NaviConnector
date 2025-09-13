@@ -18,10 +18,10 @@ coroutines = "1.10.2"
 timber = "5.0.1"
 circularseekbar = "1.4.2"
 hilt = "2.57.1"
+tedPermission = "3.4.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-circularseekbar = { module = "me.tankery.lib:circularSeekBar", version.ref = "circularseekbar" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -41,10 +41,13 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
+circularseekbar = { module = "me.tankery.lib:circularSeekBar", version.ref = "circularseekbar" }
+ted-permission = { group = "io.github.ParkSangGwon", name = "tedpermission-coroutine", version.ref = "tedPermission" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

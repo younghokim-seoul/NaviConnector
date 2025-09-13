@@ -1,9 +1,9 @@
 package com.cm.naviconnector
 
 import androidx.lifecycle.ViewModel
+import com.cm.bluetooth.BluetoothClient
 import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
-import com.cm.bluetooth.BluetoothClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +18,9 @@ class MainViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
+
+    init {
+    }
 
     fun onEvent(event: AppEvent) {
         when (event) {
@@ -63,5 +66,24 @@ class MainViewModel @Inject constructor(
 
             AppEvent.OnPauseClicked -> _uiState.update { it.copy(isPlaying = false) }
         }
+    }
+
+    fun startScan() {
+        bluetoothClient.startScan()
+//            .onEach { device ->
+//                _uiState.update { currentState ->
+//                    val newDevices = currentState.scannedDevices.toMutableSet()
+//                    newDevices.add(device)
+//                    currentState.copy(scannedDevices = newDevices)
+//                }
+//            }
+//            .catch { e ->
+//                Timber.e(e, "Error during Bluetooth scan")
+//            }
+//            .launchIn(viewModelScope)
+    }
+
+    fun stopScan() {
+//        bluetoothClient.stopScan()
     }
 }

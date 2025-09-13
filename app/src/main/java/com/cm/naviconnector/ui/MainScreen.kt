@@ -70,7 +70,7 @@ fun MainScreen(uiState: AppUiState, onEvent: (AppEvent) -> Unit) {
                         // TODO: Handle top button clicks
                     },
                     onLongClick = if (buttonType == TopButtonType.BLUETOOTH) {
-                        { onEvent(AppEvent.OnBluetoothBtnLongPress) }
+                        { onEvent(AppEvent.OnBtnLongPress) }
                     } else null,
                     enabled = enabled,
                     tint = tint
