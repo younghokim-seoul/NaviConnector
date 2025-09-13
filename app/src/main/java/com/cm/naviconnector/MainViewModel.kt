@@ -1,12 +1,20 @@
-package com.cm.naviconnector.feature
+package com.cm.naviconnector
 
 import androidx.lifecycle.ViewModel
+import com.cm.naviconnector.feature.AppEvent
+import com.cm.naviconnector.feature.AppUiState
+import com.cm.bluetooth.BluetoothClient
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import javax.inject.Inject
 
-class MainViewModel : ViewModel() {
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    private val bluetoothClient: BluetoothClient
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()

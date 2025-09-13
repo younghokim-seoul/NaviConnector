@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.hilt)
 }
 
 android {
@@ -17,4 +18,7 @@ dependencies {
     testImplementation(libs.coroutines.test)
 
     implementation(libs.timber)
+
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
 }

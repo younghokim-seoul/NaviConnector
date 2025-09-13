@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,7 +34,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
-import com.cm.naviconnector.feature.MainViewModel
+import com.cm.naviconnector.MainViewModel
 import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.ui.design.AppBackground
@@ -45,6 +46,7 @@ import com.cm.naviconnector.ui.theme.LightGrayishBlue
 import com.cm.naviconnector.ui.theme.NaviConnectorTheme
 import com.cm.naviconnector.ui.theme.Navy
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
 
