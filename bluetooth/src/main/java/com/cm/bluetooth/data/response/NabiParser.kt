@@ -22,6 +22,18 @@ object NabiParser {
         }
 
         return when (cmd) {
+            CMD.CONTROL.toByte(),         // 0x01
+            CMD.TRAINING_MODE.toByte(),   // 0x03
+            CMD.STOP_AUDIO.toByte(),      // 0x06
+            CMD.SET_VOLUME.toByte(),      // 0x07
+            CMD.UPLOAD_START.toByte(),    // 0x11
+            CMD.UPLOAD_END.toByte() -> {  // 0x13
+                if (data.isEmpty()) {
+                    ParsedPacket.Ack(packet.toList(), cmd)
+                } else {
+                    InvalidPacket.Unknown(packet.toList(), cmd)
+                }
+            }
             CMD.STATUS_INFO.toByte() -> {
                 ParsedPacket.StatusInfo(
                     raw = packet.toList(),
@@ -33,6 +45,8 @@ object NabiParser {
                     volume = data[5].toInt() and 0xFF
                 )
             }
+
+
             else -> InvalidPacket.Unknown(packet.toList(), cmd)
         }
     }

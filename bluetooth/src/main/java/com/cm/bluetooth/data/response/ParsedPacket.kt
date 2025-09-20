@@ -1,5 +1,7 @@
 package com.cm.bluetooth.data.response
 
+import com.cm.bluetooth.data.reqeust.CMD
+
 sealed class ParsedPacket : NabiPacket {
 
     // STATUS_INFO (0x02) 응답
@@ -12,8 +14,22 @@ sealed class ParsedPacket : NabiPacket {
         val isAudioPlaying: Boolean,
         val volume: Int
     ) : ParsedPacket() {
-        override val command: Byte = 0x02
+        override val command: Byte = CMD.STATUS_INFO.toByte()
     }
+
+    // LOW_BATTERY (0x21) 알림
+    data class LowBattery(
+        override val raw: List<Byte>,
+        val battery: Int
+    ) : ParsedPacket() {
+        override val command: Byte = CMD.LOW_BATTERY.toByte()
+    }
+
+    // ACK 응답 (CONTROL, SET_VOLUME 등)
+    data class Ack(
+        override val raw: List<Byte>,
+        override val command: Byte // 어떤 명령어에 대한 ACK인지 구분
+    ) : ParsedPacket()
 }
 
 
