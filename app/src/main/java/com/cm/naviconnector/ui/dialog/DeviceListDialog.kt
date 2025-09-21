@@ -33,7 +33,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.cm.bluetooth.data.BluetoothDeviceWrapper
 
 @Composable
-fun DeviceScanDialog(
+fun DeviceListDialog(
     devices: List<BluetoothDeviceWrapper>,
     onConnectClick: (BluetoothDeviceWrapper) -> Unit
 ) {

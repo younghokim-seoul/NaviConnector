@@ -25,10 +25,12 @@ import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
 import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.TopButtonType
-import com.cm.naviconnector.ui.design.CircleButton
-import com.cm.naviconnector.ui.design.PlaylistPanel
-import com.cm.naviconnector.ui.design.TopBar
-import com.cm.naviconnector.ui.dial.CircularDial
+import com.cm.naviconnector.ui.component.CircleButton
+import com.cm.naviconnector.ui.component.PlaylistPanel
+import com.cm.naviconnector.ui.component.TopBar
+import com.cm.naviconnector.ui.component.CircularSeekbar
+import com.cm.naviconnector.ui.dialog.AudioListDialog
+import com.cm.naviconnector.ui.dialog.DeviceListDialog
 import com.cm.naviconnector.ui.theme.LightGrayishBlue
 import com.cm.naviconnector.ui.theme.Navy
 
@@ -38,9 +40,20 @@ fun MainScreen(uiState: AppUiState, onEvent: (AppEvent) -> Unit) {
     val inactiveColor = LightGrayishBlue
 
     if (uiState.showDeviceListDialog) {
-        DeviceListDialog(onDismiss = { onEvent(AppEvent.OnDismissDeviceDialog) }) {
-            onEvent(AppEvent.OnDeviceChosen(it))
-        }
+        DeviceListDialog(
+            devices = emptyList(), // TODO: Pass actual device list
+            onConnectClick = { device ->
+//                onEvent(AppEvent.OnDeviceSelected())
+            }
+        )
+    }
+
+    if (uiState.showAudioListDialog) {
+        AudioListDialog(
+            audioFiles = emptyList(), // TODO: Pass actual audio file list
+            onDismiss = { onEvent(AppEvent.SetAudioDialogVisibility(false)) },
+            onAudioFileClick = { /* TODO: Handle audio file click */ }
+        )
     }
 
     Column(
@@ -67,10 +80,16 @@ fun MainScreen(uiState: AppUiState, onEvent: (AppEvent) -> Unit) {
                 CircleButton(
                     painter = painterResource(id = buttonType.icon),
                     onClick = {
-                        // TODO: Handle top button clicks
+                        when (buttonType) {
+                            TopButtonType.AUDIO -> onEvent(AppEvent.SetAudioDialogVisibility(true))
+                            TopButtonType.POWER -> TODO()
+                            TopButtonType.BLUETOOTH -> TODO()
+                            TopButtonType.WIFI -> TODO()
+                            TopButtonType.UPLOAD -> TODO()
+                        }
                     },
                     onLongClick = if (buttonType == TopButtonType.BLUETOOTH) {
-                        { onEvent(AppEvent.OnBtnLongPress) }
+                        { onEvent(AppEvent.OnBtLongPress) }
                     } else null,
                     enabled = enabled,
                     tint = tint
@@ -90,7 +109,7 @@ fun MainScreen(uiState: AppUiState, onEvent: (AppEvent) -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(painter = painterResource(id = R.drawable.cat), contentDescription = "Cat")
-            CircularDial(value = level, onValueChange = { level = it })
+            CircularSeekbar(value = level, onValueChange = { level = it })
             Image(painter = painterResource(id = R.drawable.dog), contentDescription = "Dog")
         }
 

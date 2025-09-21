@@ -8,7 +8,8 @@ data class AppUiState(
     val features: Map<Feature, FeatureState> = Feature.entries.associateWith { FeatureState() },
     val isPlaying: Boolean = false,
     val isConnected: Boolean = false,
-    val showDeviceListDialog: Boolean = false
+    val showDeviceListDialog: Boolean = false,
+    val showAudioListDialog: Boolean = false,
 ) {
     val powerActive: Boolean = features[Feature.HEAT]?.isActive == true ||
             features[Feature.AUDIO]?.isActive == true ||
