@@ -1,4 +1,4 @@
-package com.cm.naviconnector.ui.dial
+package com.cm.naviconnector.ui.component
 
 import android.graphics.Paint
 import android.view.View
@@ -23,7 +23,7 @@ import com.cm.naviconnector.util.toPx
 import me.tankery.lib.circularseekbar.CircularSeekBar
 
 @Composable
-fun CircularDial(
+fun CircularSeekbar(
     value: Int,
     onValueChange: (Int) -> Unit,
     modifier: Modifier = Modifier,

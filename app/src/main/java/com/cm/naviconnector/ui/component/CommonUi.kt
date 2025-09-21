@@ -1,4 +1,4 @@
-package com.cm.naviconnector.ui.design
+package com.cm.naviconnector.ui.component
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
