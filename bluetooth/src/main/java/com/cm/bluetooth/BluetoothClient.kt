@@ -12,12 +12,16 @@ import android.content.IntentFilter
 import android.location.LocationManager
 import com.cm.bluetooth.data.BluetoothDeviceWrapper
 import com.cm.bluetooth.data.ConnectionState
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
-import kotlin.Short.Companion.MIN_VALUE
 import timber.log.Timber
+import java.util.UUID
+import kotlin.Short.Companion.MIN_VALUE
 
 @SuppressLint("StaticFieldLeak", "HardwareIds", "MissingPermission")
 class BluetoothClient(private val context: Context) {
@@ -26,6 +30,7 @@ class BluetoothClient(private val context: Context) {
 
         @Volatile
         private var INSTANCE: BluetoothClient? = null
+
 
         fun getInstance(context: Context): BluetoothClient {
             return INSTANCE ?: synchronized(this) {
@@ -38,9 +43,9 @@ class BluetoothClient(private val context: Context) {
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     val bluetoothAdapter = bluetoothManager?.adapter
 
-
-    var activeBluetoothSocket: BluetoothSocket? = null
-    var bluetoothIO: BluetoothIO? = null
+    @Volatile
+    var currentSocket: BluetoothSocket? = null
+    private var _bluetoothConnection: BluetoothConnection? = null
 
     fun isBluetoothAvailable() = bluetoothAdapter != null && bluetoothAdapter.address.isNotEmpty()
     fun isBluetoothEnabled() = bluetoothAdapter?.isEnabled
@@ -52,13 +57,14 @@ class BluetoothClient(private val context: Context) {
 
         )
 
-    fun getWorker(bluetoothSocket: BluetoothSocket): BluetoothIO? {
-        if (bluetoothIO?.bluetoothSocket === bluetoothSocket) {
-            return bluetoothIO
+    //현재 연결되어있는 장치의 BluetoothConnection 객체 반환
+    fun getBluetoothConnection(): BluetoothConnection? {
+        return currentSocket?.let { socket ->
+            if (_bluetoothConnection?.bluetoothSocket === socket)
+                return@let _bluetoothConnection
+            _bluetoothConnection = BluetoothConnection(socket)
+            return@let _bluetoothConnection
         }
-        activeBluetoothSocket = bluetoothSocket
-        bluetoothIO = BluetoothIO(bluetoothSocket)
-        return bluetoothIO
     }
 
 
@@ -83,7 +89,8 @@ class BluetoothClient(private val context: Context) {
 
                         val device = intent.getBluetoothDeviceExtra()
 
-                        val rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, MIN_VALUE).toInt()
+                        val rssi =
+                            intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, MIN_VALUE).toInt()
 
                         device?.let { trySend(BluetoothDeviceWrapper(it, rssi)) }
                     }
@@ -140,5 +147,25 @@ class BluetoothClient(private val context: Context) {
         }
     }.flowOn(Dispatchers.IO)
 
+
+    suspend fun connect(
+        bluetoothDevice: BluetoothDevice,
+        uuid: UUID,
+        secure: Boolean = true
+    ): Deferred<BluetoothSocket> =
+        coroutineScope {
+            return@coroutineScope async(Dispatchers.IO) {
+                val bluetoothSocket =
+                    if (secure) bluetoothDevice.createRfcommSocketToServiceRecord(uuid)
+                    else bluetoothDevice.createInsecureRfcommSocketToServiceRecord(uuid)
+                bluetoothSocket.apply {
+                    currentSocket = this
+                    connect()
+                }
+            }
+        }
+
+
+    fun closeConnections() = _bluetoothConnection?.closeConnections()
 
 }
