@@ -10,7 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.lifecycleScope
 import com.cm.naviconnector.ui.MainScreen
-import com.cm.naviconnector.ui.design.AppBackground
+import com.cm.naviconnector.ui.component.AppBackground
 import com.cm.naviconnector.ui.theme.NaviConnectorTheme
 import com.gun0912.tedpermission.coroutine.TedPermission
 import dagger.hilt.android.AndroidEntryPoint
@@ -37,17 +37,26 @@ class MainActivity : ComponentActivity() {
 
     private fun checkPermissions() {
         lifecycleScope.launch {
-            val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 arrayOf(
                     Manifest.permission.BLUETOOTH_SCAN,
                     Manifest.permission.BLUETOOTH_CONNECT,
-                    Manifest.permission.ACCESS_FINE_LOCATION
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.READ_MEDIA_AUDIO
+                )
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.READ_EXTERNAL_STORAGE
                 )
             } else {
                 arrayOf(
                     Manifest.permission.BLUETOOTH,
                     Manifest.permission.BLUETOOTH_ADMIN,
-                    Manifest.permission.ACCESS_FINE_LOCATION
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.READ_EXTERNAL_STORAGE
                 )
             }
 
