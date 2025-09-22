@@ -2,6 +2,7 @@ package com.cm.bluetooth.data.response
 
 import com.cm.bluetooth.data.reqeust.CMD
 import com.cm.bluetooth.data.reqeust.ModbusCrc
+import java.nio.charset.Charset
 
 object NabiParser {
     fun parse(packet: ByteArray): NabiPacket {
@@ -34,6 +35,7 @@ object NabiParser {
                     InvalidPacket.Unknown(packet.toList(), cmd)
                 }
             }
+
             CMD.STATUS_INFO.toByte() -> {
                 ParsedPacket.StatusInfo(
                     raw = packet.toList(),
@@ -44,6 +46,57 @@ object NabiParser {
                     isAudioPlaying = data[4] == 0x01.toByte(),
                     volume = data[5].toInt() and 0xFF
                 )
+            }
+
+            CMD.GET_AUDIO_LIST.toByte() -> {
+                if (data.size > 3) {
+                    val fileNamesBytes = data.drop(3).toByteArray()
+                    // 쉼표로 구분된 문자열을 파싱하여 리스트로 만듬
+                    val fileNames = String(fileNamesBytes, Charset.defaultCharset())
+                        .split(',')
+                        .filter { it.isNotEmpty() }
+                    ParsedPacket.AudioList(
+                        raw = packet.toList(),
+                        currentPage = data[0].toInt() and 0xFF,
+                        totalPages = data[1].toInt() and 0xFF,
+                        fileCountInPage = data[2].toInt() and 0xFF,
+                        fileNames = fileNames
+                    )
+                } else {
+                    InvalidPacket.Unknown(packet.toList(), cmd)
+                }
+            }
+
+            CMD.PLAY_AUDIO.toByte() -> {
+                if (data.size == 1) {
+                    ParsedPacket.PlayAudioResult(
+                        raw = packet.toList(),
+                        resultCode = ParsedPacket.PlayAudioResult.ResultCode.fromByte(data[0])
+                    )
+                } else {
+                    InvalidPacket.Unknown(packet.toList(), cmd)
+                }
+            }
+
+            CMD.UPLOAD_DOING.toByte() -> {
+                if (data.size == 2) {
+                    val frameNumber = ((data[0].toInt() and 0xFF) shl 8) or (data[1].toInt() and 0xFF)
+                    ParsedPacket.UploadDoingAck(
+                        raw = packet.toList(),
+                        frameNumber = frameNumber
+                    )
+                } else {
+                    InvalidPacket.Unknown(packet.toList(), CMD.UPLOAD_DOING.toByte())
+                }
+            }
+
+            CMD.LOW_BATTERY.toByte() -> if (data.size == 1) {
+                ParsedPacket.LowBattery(
+                    raw = packet.toList(),
+                    battery = data[0].toInt() and 0xFF
+                )
+            } else {
+                InvalidPacket.Unknown(packet.toList(), CMD.LOW_BATTERY.toByte())
             }
 
 
