@@ -1,5 +1,6 @@
 package com.cm.naviconnector.ui.dialog
 
+import android.bluetooth.BluetoothDevice
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,12 +31,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.cm.bluetooth.data.BluetoothDeviceWrapper
 
 @Composable
 fun DeviceListDialog(
-    devices: List<BluetoothDeviceWrapper>,
-    onConnectClick: (BluetoothDeviceWrapper) -> Unit
+    devices: List<BluetoothDevice>,
+    onConnectClick: (BluetoothDevice) -> Unit
 ) {
     Dialog(
         onDismissRequest = { },
@@ -90,8 +90,8 @@ fun NoDeviceView() {
 
 @Composable
 fun ColumnScope.DeviceListView(
-    devices: List<BluetoothDeviceWrapper>,
-    onConnectClick: (BluetoothDeviceWrapper) -> Unit
+    devices: List<BluetoothDevice>,
+    onConnectClick: (BluetoothDevice) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -126,7 +126,7 @@ fun ColumnScope.DeviceListView(
     ) {
         itemsIndexed(
             items = devices,
-            key = { _, device -> device.bluetoothDevice.address }
+            key = { _, device -> device.address }
         ) { index, device ->
             DeviceItem(device = device, onConnectClick = { onConnectClick(device) })
             if (index < devices.lastIndex) {
@@ -137,7 +137,7 @@ fun ColumnScope.DeviceListView(
 }
 
 @Composable
-fun DeviceItem(device: BluetoothDeviceWrapper, onConnectClick: () -> Unit) {
+fun DeviceItem(device: BluetoothDevice, onConnectClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -147,14 +147,14 @@ fun DeviceItem(device: BluetoothDeviceWrapper, onConnectClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = device.bluetoothDevice.name ?: "알 수 없는 기기",
+                text = device.name ?: "알 수 없는 기기",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = device.bluetoothDevice.address,
+                text = device.address,
                 fontSize = 14.sp,
                 color = Color.Gray
             )

@@ -12,9 +12,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,14 +28,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.cm.naviconnector.MainViewModel
 import com.cm.naviconnector.R
+import com.cm.naviconnector.feature.AppEffect
 import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
 import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.ui.component.CircleButton
+import com.cm.naviconnector.ui.component.CircularSeekbar
 import com.cm.naviconnector.ui.component.PlaylistPanel
 import com.cm.naviconnector.ui.component.TopBar
-import com.cm.naviconnector.ui.component.CircularSeekbar
 import com.cm.naviconnector.ui.dialog.AudioListDialog
 import com.cm.naviconnector.ui.dialog.DeviceListDialog
 import com.cm.naviconnector.ui.theme.LightGrayishBlue
@@ -40,23 +44,35 @@ import com.cm.naviconnector.ui.theme.Navy
 
 @Composable
 fun MainRoute(vm: MainViewModel = hiltViewModel()) {
-    val uiState = vm.uiState.collectAsStateWithLifecycle().value
+    var showDeviceDialog by rememberSaveable { mutableStateOf(false) }
+    var showAudioDialog by rememberSaveable { mutableStateOf(false) }
 
-    if (uiState.showDeviceListDialog) {
+    LaunchedEffect(vm) {
+        vm.effects.collect { effect ->
+            when (effect) {
+                is AppEffect.SetDeviceDialogVisible -> showDeviceDialog = effect.visible
+                is AppEffect.SetAudioDialogVisible -> showAudioDialog = effect.visible
+            }
+        }
+    }
+
+    if (showDeviceDialog) {
+        val devices by vm.scannedDevices.collectAsStateWithLifecycle()
         DeviceListDialog(
-            devices = emptyList(), // TODO: 실제 리스트 전달
-            onConnectClick = { /* vm.onEvent(AppEvent.OnDeviceSelected(it)) */ }
+            devices = devices,
+            onConnectClick = { vm.onClickDevice(it) }
         )
     }
 
-    if (uiState.showAudioListDialog) {
+    if (showAudioDialog) {
         val audioFiles = vm.audioPaging.collectAsLazyPagingItems()
         AudioListDialog(
             audioFiles = audioFiles,
-            onAudioFileClick = { /* TODO */ },
-            onDismiss = { vm.onEvent(AppEvent.SetAudioDialogVisible(false)) }
+            onAudioFileClick = { vm.onAudioFileClick(it) },
         )
     }
+
+    val uiState = vm.uiState.collectAsStateWithLifecycle().value
 
     MainScreen(
         uiState = uiState,

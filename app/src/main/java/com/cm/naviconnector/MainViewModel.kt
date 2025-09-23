@@ -1,43 +1,77 @@
 package com.cm.naviconnector
 
-import androidx.paging.PagingData
-import androidx.paging.cachedIn
-import kotlinx.coroutines.flow.Flow
-import com.cm.naviconnector.feature.audio.AudioFile
+import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.cm.bluetooth.BluetoothClient
-import com.cm.bluetooth.data.BluetoothDeviceWrapper
+import com.cm.naviconnector.feature.AppEffect
 import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
+import com.cm.naviconnector.feature.audio.AudioFile
 import com.cm.naviconnector.feature.audio.AudioRepository
+import com.cm.naviconnector.feature.control.TopButtonType
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val bluetoothClient: BluetoothClient,
-    private val audioRepository: AudioRepository
+    audioRepository: AudioRepository
 ) : ViewModel() {
+
+    companion object {
+        private const val CONNECT_TIMEOUT_MS = 5000L
+    }
 
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 
-    private val _scannedDevices = MutableStateFlow(emptyList<BluetoothDeviceWrapper>())
-    val scannedDevices: StateFlow<List<BluetoothDeviceWrapper>> = _scannedDevices
+    private val _effects = Channel<AppEffect>(Channel.BUFFERED)
+    val effects: Flow<AppEffect> = _effects.receiveAsFlow()
+
+    private val _scannedDevices = MutableStateFlow(emptyList<BluetoothDevice>())
+    val scannedDevices: StateFlow<List<BluetoothDevice>> = _scannedDevices
 
     val audioPaging: Flow<PagingData<AudioFile>> =
         audioRepository
             .pagedAudio()
             .cachedIn(viewModelScope)
 
+    private val uuid: UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
+
     fun onEvent(event: AppEvent) {
         when (event) {
+            is AppEvent.OnTopButtonTapped -> {
+                when (event.type) {
+                    TopButtonType.POWER -> {
+                    }
+
+                    TopButtonType.BLUETOOTH -> {
+                        _effects.trySend(AppEffect.SetDeviceDialogVisible(true))
+                    }
+
+                    TopButtonType.WIFI -> {
+                    }
+
+                    TopButtonType.UPLOAD -> {
+                    }
+                }
+            }
+
             is AppEvent.OnFeatureTapped -> {
                 if (!_uiState.value.isConnected) return
                 _uiState.update { currentState ->
@@ -64,48 +98,43 @@ class MainViewModel @Inject constructor(
                 }
             }
 
-            AppEvent.OnBtLongPress -> {
-                _uiState.update { it.copy(showDeviceListDialog = true) }
-            }
-
             is AppEvent.OnDeviceSelected -> {
-                _uiState.update { it.copy(isConnected = true, showDeviceListDialog = false) }
+                _uiState.update { it.copy(isConnected = true) }
             }
 
             AppEvent.OnPlayClicked -> _uiState.update { it.copy(isPlaying = true) }
 
             AppEvent.OnPauseClicked -> _uiState.update { it.copy(isPlaying = false) }
-
-            is AppEvent.SetAudioDialogVisible -> {
-                _uiState.update { it.copy(showAudioListDialog = event.visible) }
-            }
         }
     }
 
     fun startScan() = viewModelScope.launch {
         if (bluetoothClient.startScan() == true) {
-            bluetoothClient.collectScanDevices()
-                .collect { new ->
-                    _scannedDevices.update { current ->
-                        (current + new).distinctBy { it.bluetoothDevice.address }
-                    }
-                }
+            _scannedDevices.update { bluetoothClient.bondedDevices()?.toList().orEmpty() }
         } else {
-
+            // TODO: scan failed toast message
         }
     }
 
-    fun stopScan() {
-//        bluetoothClient.stopScan()
+    fun onClickDevice(device: BluetoothDevice) = viewModelScope.launch {
+        val connected = withContext(Dispatchers.IO) {
+            runCatching {
+                withTimeout(CONNECT_TIMEOUT_MS) {
+                    bluetoothClient.connect(device, uuid)
+                }
+            }.isSuccess
+        }
+
+        if (connected) {
+            _uiState.update { it.copy(isConnected = true) }
+            _effects.send(AppEffect.SetDeviceDialogVisible(false))
+            // TODO: observe connection
+        } else {
+            // TODO: connection failed toast message
+        }
     }
 
-    fun onClickDevice(device: BluetoothDeviceWrapper) = viewModelScope.launch {
-//        bluetoothClient.getWorker(device.bluetoothDevice.createInsecureL2capChannel())
-        bluetoothClient.collectConnectionState()
-            .collect {
-                if (device.bluetoothDevice.address == it.bluetoothDevice?.address) {
+    fun onAudioFileClick(file: AudioFile) {
 
-                }
-            }
     }
 }
