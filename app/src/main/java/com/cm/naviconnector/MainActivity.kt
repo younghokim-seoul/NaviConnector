@@ -6,10 +6,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.lifecycle.lifecycleScope
-import com.cm.naviconnector.ui.MainScreen
+import com.cm.naviconnector.ui.MainRoute
 import com.cm.naviconnector.ui.component.AppBackground
 import com.cm.naviconnector.ui.theme.NaviConnectorTheme
 import com.gun0912.tedpermission.coroutine.TedPermission
@@ -27,9 +25,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             NaviConnectorTheme {
-                val uiState by viewModel.uiState.collectAsState()
                 AppBackground {
-                    MainScreen(uiState = uiState, onEvent = viewModel::onEvent)
+                    MainRoute(viewModel)
                 }
             }
         }

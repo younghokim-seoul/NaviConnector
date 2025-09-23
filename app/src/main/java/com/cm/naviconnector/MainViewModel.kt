@@ -76,21 +76,10 @@ class MainViewModel @Inject constructor(
 
             AppEvent.OnPauseClicked -> _uiState.update { it.copy(isPlaying = false) }
 
-            is AppEvent.SetAudioDialogVisibility -> {
-                _uiState.update { it.copy(showAudioListDialog = event.isVisible) }
-                if (event.isVisible) {
-                    loadAudioFiles()
-                }
-            }
-
-            AppEvent.OnLoadAudioFiles -> {
-                loadAudioFiles()
+            is AppEvent.SetAudioDialogVisible -> {
+                _uiState.update { it.copy(showAudioListDialog = event.visible) }
             }
         }
-    }
-
-    private fun loadAudioFiles() = viewModelScope.launch {
-//        val audioFiles = audioRepository.getAudioFiles()
     }
 
     fun startScan() = viewModelScope.launch {

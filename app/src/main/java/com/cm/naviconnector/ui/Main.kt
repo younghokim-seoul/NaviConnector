@@ -20,6 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.compose.collectAsLazyPagingItems
+import com.cm.naviconnector.MainViewModel
 import com.cm.naviconnector.R
 import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
@@ -35,26 +39,38 @@ import com.cm.naviconnector.ui.theme.LightGrayishBlue
 import com.cm.naviconnector.ui.theme.Navy
 
 @Composable
-fun MainScreen(uiState: AppUiState, onEvent: (AppEvent) -> Unit) {
-    val activeColor = Navy
-    val inactiveColor = LightGrayishBlue
+fun MainRoute(vm: MainViewModel = hiltViewModel()) {
+    val uiState = vm.uiState.collectAsStateWithLifecycle().value
 
     if (uiState.showDeviceListDialog) {
         DeviceListDialog(
-            devices = emptyList(), // TODO: Pass actual device list
-            onConnectClick = { device ->
-//                onEvent(AppEvent.OnDeviceSelected())
-            }
+            devices = emptyList(), // TODO: 실제 리스트 전달
+            onConnectClick = { /* vm.onEvent(AppEvent.OnDeviceSelected(it)) */ }
         )
     }
 
     if (uiState.showAudioListDialog) {
+        val audioFiles = vm.audioPaging.collectAsLazyPagingItems()
         AudioListDialog(
-            audioFiles = emptyList(), // TODO: Pass actual audio file list
-            onDismiss = { onEvent(AppEvent.SetAudioDialogVisibility(false)) },
-            onAudioFileClick = { /* TODO: Handle audio file click */ }
+            audioFiles = audioFiles,
+            onAudioFileClick = { /* TODO */ },
+            onDismiss = { vm.onEvent(AppEvent.SetAudioDialogVisible(false)) }
         )
     }
+
+    MainScreen(
+        uiState = uiState,
+        onEvent = vm::onEvent
+    )
+}
+
+@Composable
+fun MainScreen(
+    uiState: AppUiState,
+    onEvent: (AppEvent) -> Unit,
+) {
+    val activeColor = Navy
+    val inactiveColor = LightGrayishBlue
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -81,7 +97,6 @@ fun MainScreen(uiState: AppUiState, onEvent: (AppEvent) -> Unit) {
                     painter = painterResource(id = buttonType.icon),
                     onClick = {
                         when (buttonType) {
-                            TopButtonType.AUDIO -> onEvent(AppEvent.SetAudioDialogVisibility(true))
                             TopButtonType.POWER -> TODO()
                             TopButtonType.BLUETOOTH -> TODO()
                             TopButtonType.WIFI -> TODO()

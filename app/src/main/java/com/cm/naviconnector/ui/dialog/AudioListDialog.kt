@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,14 +29,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.paging.compose.LazyPagingItems
 import com.cm.naviconnector.feature.audio.AudioFile
 import com.cm.naviconnector.util.formatDuration
 
 @Composable
 fun AudioListDialog(
-    audioFiles: List<AudioFile>,
-    onDismiss: () -> Unit,
-    onAudioFileClick: (AudioFile) -> Unit
+    audioFiles: LazyPagingItems<AudioFile>,
+    onAudioFileClick: (AudioFile) -> Unit,
+    onDismiss: () -> Unit
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -64,7 +64,7 @@ fun AudioListDialog(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (audioFiles.isEmpty()) {
+                if (audioFiles.itemCount == 0) {
                     NoAudioFileView()
                 } else {
                     AudioFileListView(audioFiles = audioFiles, onAudioFileClick = onAudioFileClick)
@@ -92,7 +92,7 @@ fun NoAudioFileView() {
 
 @Composable
 fun ColumnScope.AudioFileListView(
-    audioFiles: List<AudioFile>,
+    audioFiles: LazyPagingItems<AudioFile>,
     onAudioFileClick: (AudioFile) -> Unit
 ) {
     LazyColumn(
@@ -126,13 +126,18 @@ fun ColumnScope.AudioFileListView(
             },
         contentPadding = PaddingValues(vertical = 16.dp)
     ) {
-        itemsIndexed(
-            items = audioFiles,
-            key = { _, audioFile -> audioFile.uri.toString() }
-        ) { index, audioFile ->
-            AudioFileItem(audioFile = audioFile, onAudioFileClick = { onAudioFileClick(audioFile) })
-            if (index < audioFiles.lastIndex) {
-                HorizontalDivider()
+        items(
+            count = audioFiles.itemCount,
+            key = { index -> audioFiles[index]?.uri.toString() }
+        ) { index ->
+            val audioFile = audioFiles[index]
+            if (audioFile != null) {
+                AudioFileItem(
+                    audioFile = audioFile,
+                    onAudioFileClick = { onAudioFileClick(audioFile) })
+                if (index < audioFiles.itemCount - 1) {
+                    HorizontalDivider()
+                }
             }
         }
     }
