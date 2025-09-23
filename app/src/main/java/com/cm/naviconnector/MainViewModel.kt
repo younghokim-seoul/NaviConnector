@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.cm.bluetooth.BluetoothClient
+import com.cm.bluetooth.data.reqeust.ControlPacket
+import com.cm.bluetooth.data.reqeust.ControlTarget
 import com.cm.bluetooth.data.reqeust.TrainingMode
 import com.cm.bluetooth.data.reqeust.TrainingModeRequest
 import com.cm.naviconnector.feature.AppEffect
@@ -17,6 +19,7 @@ import com.cm.naviconnector.feature.audio.AudioRepository
 import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.FeatureState
 import com.cm.naviconnector.feature.control.TopButtonType
+import com.cm.naviconnector.feature.control.toControlTargetOrNull
 import com.cm.naviconnector.util.sendAll
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -80,14 +83,29 @@ class MainViewModel @Inject constructor(
 
             is AppEvent.OnDialChanged -> {
                 if (!_uiState.value.isConnected) return
-                _uiState.update { currentState ->
-                    val newFeatures = currentState.features.toMutableMap()
-                    val currentFeatureState = newFeatures[currentState.currentFeature]
-                    if (currentFeatureState != null && currentFeatureState.enabled) {
-                        newFeatures[currentState.currentFeature] =
-                            currentFeatureState.copy(level = event.level)
+
+                val currentFeature = _uiState.value.currentFeature
+                val newLevel = event.level
+
+                val controlTarget = currentFeature.toControlTargetOrNull()
+                if (controlTarget != null) {
+                    
+                    val packet = ControlPacket(target = controlTarget, value = newLevel)
+                    val isSuccess = bluetoothConnection?.sendPacket(packet.toByteArray())
+
+                    if (isSuccess == true) {
+                        _uiState.update { currentState ->
+                            val newFeatures = currentState.features.toMutableMap()
+                            val currentFeatureState = newFeatures[currentFeature]
+                            if (currentFeatureState != null && currentFeatureState.enabled) {
+                                newFeatures[currentFeature] =
+                                    currentFeatureState.copy(level = newLevel)
+                            }
+                            currentState.copy(features = newFeatures)
+                        }
+                    } else {
+                        _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
                     }
-                    currentState.copy(features = newFeatures)
                 }
             }
 
