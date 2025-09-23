@@ -1,5 +1,9 @@
 package com.cm.naviconnector
 
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import kotlinx.coroutines.flow.Flow
+import com.cm.naviconnector.feature.audio.AudioFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cm.bluetooth.BluetoothClient
@@ -27,9 +31,10 @@ class MainViewModel @Inject constructor(
     private val _scannedDevices = MutableStateFlow(emptyList<BluetoothDeviceWrapper>())
     val scannedDevices: StateFlow<List<BluetoothDeviceWrapper>> = _scannedDevices
 
-//    val audioFiles = audioRepository.pagedAudio(
-//        sort = { uiState.value.audioSort }
-//    ).cachedIn(viewModelScope)
+    val audioPaging: Flow<PagingData<AudioFile>> =
+        audioRepository
+            .pagedAudio()
+            .cachedIn(viewModelScope)
 
     fun onEvent(event: AppEvent) {
         when (event) {
