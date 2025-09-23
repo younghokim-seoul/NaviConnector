@@ -9,5 +9,4 @@ sealed interface AppEvent {
     data class OnDeviceSelected(val id: String) : AppEvent
     data object OnPlayClicked : AppEvent
     data object OnPauseClicked : AppEvent
-    data class SetAudioDialogVisible(val visible: Boolean) : AppEvent
 }

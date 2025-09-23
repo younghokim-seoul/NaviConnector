@@ -37,10 +37,9 @@ import com.cm.naviconnector.util.formatDuration
 fun AudioListDialog(
     audioFiles: LazyPagingItems<AudioFile>,
     onAudioFileClick: (AudioFile) -> Unit,
-    onDismiss: () -> Unit
 ) {
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {},
         properties = DialogProperties(
             dismissOnBackPress = true,
             dismissOnClickOutside = true
