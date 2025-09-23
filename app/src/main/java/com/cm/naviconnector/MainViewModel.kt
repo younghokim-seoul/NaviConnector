@@ -1,17 +1,25 @@
 package com.cm.naviconnector
 
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.cm.bluetooth.BluetoothClient
+import com.cm.bluetooth.data.reqeust.ControlPacket
+import com.cm.bluetooth.data.reqeust.ControlTarget
+import com.cm.bluetooth.data.reqeust.TrainingMode
+import com.cm.bluetooth.data.reqeust.TrainingModeRequest
 import com.cm.naviconnector.feature.AppEffect
 import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
 import com.cm.naviconnector.feature.audio.AudioFile
 import com.cm.naviconnector.feature.audio.AudioRepository
+import com.cm.naviconnector.feature.control.Feature
+import com.cm.naviconnector.feature.control.FeatureState
 import com.cm.naviconnector.feature.control.TopButtonType
+import com.cm.naviconnector.util.sendAll
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -53,36 +61,23 @@ class MainViewModel @Inject constructor(
 
     private val uuid: UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
 
+    private val bluetoothConnection
+        get() = bluetoothClient.getBluetoothConnection()
+
     fun onEvent(event: AppEvent) {
         when (event) {
             is AppEvent.OnTopButtonTapped -> {
                 when (event.type) {
-                    TopButtonType.POWER -> {
-                    }
-
-                    TopButtonType.BLUETOOTH -> {
-                        _effects.trySend(AppEffect.SetDeviceDialogVisible(true))
-                    }
-
-                    TopButtonType.WIFI -> {
-                    }
-
-                    TopButtonType.UPLOAD -> {
-                    }
+                    TopButtonType.POWER -> onPowerButtonClick()
+                    TopButtonType.BLUETOOTH -> onBluetoothButtonClick()
+                    TopButtonType.WIFI -> onWifiButtonClick()
+                    TopButtonType.UPLOAD -> onUploadButtonClick()
                 }
             }
 
             is AppEvent.OnFeatureTapped -> {
                 if (!_uiState.value.isConnected) return
-                _uiState.update { currentState ->
-                    val newFeatures = currentState.features.toMutableMap()
-                    val featureState = newFeatures[event.feature]
-                    if (featureState != null) {
-                        newFeatures[event.feature] =
-                            featureState.copy(enabled = !featureState.enabled)
-                    }
-                    currentState.copy(currentFeature = event.feature, features = newFeatures)
-                }
+                _uiState.update { it.copy(currentFeature = event.feature) }
             }
 
             is AppEvent.OnDialChanged -> {
@@ -112,7 +107,7 @@ class MainViewModel @Inject constructor(
         if (bluetoothClient.startScan() == true) {
             _scannedDevices.update { bluetoothClient.bondedDevices()?.toList().orEmpty() }
         } else {
-            // TODO: scan failed toast message
+            _effects.send(AppEffect.ShowToast("블루투스 스캔에 실패했습니다"))
         }
     }
 
@@ -126,15 +121,76 @@ class MainViewModel @Inject constructor(
         }
 
         if (connected) {
+            // TODO: collectConnectionState로 처리 가능한지 확인 필요
             _uiState.update { it.copy(isConnected = true) }
-            _effects.send(AppEffect.SetDeviceDialogVisible(false))
-            // TODO: observe connection
+            _effects.sendAll(
+                AppEffect.SetDeviceDialogVisible(false),
+                AppEffect.ShowToast("장치에 연결되었습니다")
+            )
+            bluetoothConnection?.sendPacket(TrainingModeRequest(TrainingMode.RANDOM).toByteArray())
+
+            bluetoothClient.collectConnectionState().collect {
+                when (it.state) {
+                    BluetoothAdapter.STATE_CONNECTED -> {
+                    }
+
+                    BluetoothAdapter.STATE_DISCONNECTED -> { // TODO: feature deactivate
+                        _uiState.update { currentState ->
+                            currentState.copy(
+                                isConnected = false,
+                                isPlaying = false
+                            )
+                        }
+                        _effects.send(AppEffect.ShowToast("장치와 연결이 해제되었습니다"))
+                    }
+
+                    else -> {}
+                }
+            }
         } else {
-            // TODO: connection failed toast message
+            _effects.send(AppEffect.ShowToast("장치 연결에 실패했습니다"))
         }
     }
 
-    fun onAudioFileClick(file: AudioFile) {
+    fun onPowerButtonClick() {
+        if (!_uiState.value.isConnected) return
+        enableAllFeatures()
+    }
+
+    private fun enableAllFeatures() {
+        _uiState.update { currentState ->
+            currentState.copy(
+                features = mapOf(
+                    Feature.HEATER to FeatureState(enabled = true, level = 1),
+                    Feature.AUDIO to FeatureState(enabled = true, level = 1),
+                    Feature.FAN to FeatureState(enabled = true, level = 1),
+                    Feature.FILM to FeatureState(enabled = true, level = 1),
+                )
+            )
+        }
+    }
+
+    fun onBluetoothButtonClick() {
+        _effects.trySend(AppEffect.SetDeviceDialogVisible(true))
+    }
+
+    fun onWifiButtonClick() {
+
+    }
+
+    fun onUploadButtonClick() {
+        _effects.trySend(AppEffect.SetAudioDialogVisible(true))
+    }
+
+    fun onAudioFileClick() {
+
+    }
+
+    fun onPlayButtonClick() {
+
+    }
+
+    fun onPauseButtonClick() {
 
     }
 }

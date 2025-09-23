@@ -52,7 +52,6 @@ fun TopBar() {
 fun CircleButton(
     painter: Painter,
     onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     tint: Color = Color.Unspecified,
     enabled: Boolean = true
@@ -64,7 +63,6 @@ fun CircleButton(
             .background(Color.White)
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = onLongClick,
                 enabled = enabled
             )
             .padding(14.dp),

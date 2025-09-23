@@ -1,5 +1,6 @@
 package com.cm.naviconnector.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,10 +18,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -44,6 +47,9 @@ import com.cm.naviconnector.ui.theme.Navy
 
 @Composable
 fun MainRoute(vm: MainViewModel = hiltViewModel()) {
+    val context = LocalContext.current
+    val currentContext by rememberUpdatedState(newValue = context)
+
     var showDeviceDialog by rememberSaveable { mutableStateOf(false) }
     var showAudioDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -52,6 +58,11 @@ fun MainRoute(vm: MainViewModel = hiltViewModel()) {
             when (effect) {
                 is AppEffect.SetDeviceDialogVisible -> showDeviceDialog = effect.visible
                 is AppEffect.SetAudioDialogVisible -> showAudioDialog = effect.visible
+                is AppEffect.ShowToast -> Toast.makeText(
+                    currentContext,
+                    effect.message,
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
@@ -113,15 +124,17 @@ fun MainScreen(
                     painter = painterResource(id = buttonType.icon),
                     onClick = {
                         when (buttonType) {
-                            TopButtonType.POWER -> TODO()
-                            TopButtonType.BLUETOOTH -> TODO()
-                            TopButtonType.WIFI -> TODO()
-                            TopButtonType.UPLOAD -> TODO()
+                            TopButtonType.POWER -> onEvent(AppEvent.OnTopButtonTapped(TopButtonType.POWER))
+                            TopButtonType.BLUETOOTH -> onEvent(
+                                AppEvent.OnTopButtonTapped(
+                                    TopButtonType.BLUETOOTH
+                                )
+                            )
+
+                            TopButtonType.WIFI -> onEvent(AppEvent.OnTopButtonTapped(TopButtonType.WIFI))
+                            TopButtonType.UPLOAD -> onEvent(AppEvent.OnTopButtonTapped(TopButtonType.UPLOAD))
                         }
                     },
-                    onLongClick = if (buttonType == TopButtonType.BLUETOOTH) {
-                        { onEvent(AppEvent.OnBtLongPress) }
-                    } else null,
                     enabled = enabled,
                     tint = tint
                 )

@@ -9,7 +9,7 @@ data class AppUiState(
     val isPlaying: Boolean = false,
     val isConnected: Boolean = false,
 ) {
-    val powerActive: Boolean = features[Feature.HEAT]?.isActive == true ||
+    val powerActive: Boolean = features[Feature.HEATER]?.isActive == true ||
             features[Feature.AUDIO]?.isActive == true ||
             features[Feature.FILM]?.isActive == true
 }
