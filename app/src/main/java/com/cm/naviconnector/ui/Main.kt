@@ -15,9 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -116,25 +114,12 @@ fun MainScreen(
                 }
                 val enabled = when (buttonType) {
                     TopButtonType.POWER -> uiState.isPowerOn
-                    TopButtonType.BLUETOOTH -> true
                     else -> uiState.isConnected
                 }
 
                 CircleButton(
                     painter = painterResource(id = buttonType.icon),
-                    onClick = {
-                        when (buttonType) {
-                            TopButtonType.POWER -> onEvent(AppEvent.OnTopButtonTapped(TopButtonType.POWER))
-                            TopButtonType.BLUETOOTH -> onEvent(
-                                AppEvent.OnTopButtonTapped(
-                                    TopButtonType.BLUETOOTH
-                                )
-                            )
-
-                            TopButtonType.WIFI -> onEvent(AppEvent.OnTopButtonTapped(TopButtonType.WIFI))
-                            TopButtonType.UPLOAD -> onEvent(AppEvent.OnTopButtonTapped(TopButtonType.UPLOAD))
-                        }
-                    },
+                    onClick = { onEvent(AppEvent.OnTopButtonTapped(buttonType)) },
                     enabled = enabled,
                     tint = tint
                 )
@@ -143,9 +128,11 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        val currentFeatureState = uiState.features[uiState.currentFeature]
-        val dialColor = if (currentFeatureState?.isActive == true) activeColor else inactiveColor
-        var level by remember { mutableIntStateOf(0) }
+        val currentFeature = uiState.currentFeature
+        val currentFeatureState = uiState.features[currentFeature]
+        val pointerShadowColor = currentFeature.color
+        val buttonColor = if (currentFeatureState?.isActive == true) activeColor else inactiveColor
+        val level = currentFeatureState?.level ?: 0
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -153,7 +140,11 @@ fun MainScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(painter = painterResource(id = R.drawable.cat), contentDescription = "Cat")
-            CircularSeekbar(value = level, onValueChange = { level = it })
+            CircularSeekbar(
+                value = level,
+                onValueChange = { onEvent(AppEvent.OnDialChanged(it)) },
+                pointerShadowColor = pointerShadowColor
+            )
             Image(painter = painterResource(id = R.drawable.dog), contentDescription = "Dog")
         }
 
@@ -164,7 +155,7 @@ fun MainScreen(
                 CircleButton(
                     painter = painterResource(id = feature.icon),
                     onClick = { onEvent(AppEvent.OnFeatureTapped(feature)) },
-                    tint = dialColor,
+                    tint = buttonColor,
                     enabled = uiState.isConnected
                 )
             }

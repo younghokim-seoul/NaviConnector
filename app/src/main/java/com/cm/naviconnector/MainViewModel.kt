@@ -175,7 +175,7 @@ class MainViewModel @Inject constructor(
         _effects.trySend(AppEffect.SetAudioDialogVisible(true))
     }
 
-    fun onAudioFileClick() {
+    fun onAudioFileClick(file: AudioFile) {
 
     }
 

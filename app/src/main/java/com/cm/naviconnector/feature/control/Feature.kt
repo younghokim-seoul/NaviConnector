@@ -1,11 +1,17 @@
 package com.cm.naviconnector.feature.control
 
+import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
+import androidx.compose.ui.graphics.Color
 import com.cm.naviconnector.R
+import com.cm.naviconnector.ui.theme.Aqua
+import com.cm.naviconnector.ui.theme.Goldenrod
+import com.cm.naviconnector.ui.theme.Indigo
+import com.cm.naviconnector.ui.theme.Rose
 
-enum class Feature(@DrawableRes val icon: Int) {
-    HEATER(R.drawable.heater),
-    AUDIO(R.drawable.audio),
-    FAN(R.drawable.fan),
-    FILM(R.drawable.film)
+enum class Feature(@DrawableRes val icon: Int, @ColorInt val color: Color) {
+    HEATER(R.drawable.heater, Rose),
+    AUDIO(R.drawable.audio, Aqua),
+    FAN(R.drawable.fan, Indigo),
+    FILM(R.drawable.film, Goldenrod)
 }

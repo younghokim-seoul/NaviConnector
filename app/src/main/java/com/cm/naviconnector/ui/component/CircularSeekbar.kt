@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
@@ -34,6 +35,7 @@ fun CircularSeekbar(
     pointerWidth: Dp = 32.dp,
     numberColor: Color = Color.Black,
     startAngle: Float = 90f,
+    pointerShadowColor: Color = Color.LightGray,
 ) {
     val density = LocalDensity.current
     val seekSize = centeredProgressDiameter(innerSize, outerSize, pointerWidth)
@@ -43,11 +45,18 @@ fun CircularSeekbar(
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .shadow(
+                    elevation = 10.dp,
+                    shape = CircleShape,
+                    ambientColor = pointerShadowColor,
+                    spotColor = pointerShadowColor
+                ),
             shape = CircleShape,
             color = Color.White,
-            tonalElevation = 2.dp,
-            shadowElevation = 10.dp
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp
         ) {}
 
         AndroidView(
@@ -102,11 +111,18 @@ fun CircularSeekbar(
         )
 
         Surface(
-            modifier = Modifier.size(innerSize),
+            modifier = Modifier
+                .size(innerSize)
+                .shadow(
+                    elevation = 8.dp,
+                    shape = CircleShape,
+                    ambientColor = pointerShadowColor,
+                    spotColor = pointerShadowColor
+                ),
             shape = CircleShape,
             color = Color.White,
-            tonalElevation = 4.dp,
-            shadowElevation = 8.dp
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp
         ) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(

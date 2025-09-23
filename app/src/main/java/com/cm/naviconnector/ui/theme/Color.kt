@@ -13,3 +13,8 @@ val LightGrayishBlue = Color(0xFFDAE3E5)
 val LightBlueish = Color(0xFFF1F4FF)
 val LightPurple = Color(0xFFA3AFF1)
 val Navy = Color(0xFF132650)
+
+val Rose = Color(0xFFC26C6C)
+val Aqua = Color(0xFF75D1D9)
+val Indigo = Color(0xFF7F61C7)
+val Goldenrod = Color(0xFFCDA91C)
