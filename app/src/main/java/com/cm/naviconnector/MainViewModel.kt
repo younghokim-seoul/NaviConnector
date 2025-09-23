@@ -7,8 +7,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.cm.bluetooth.BluetoothClient
-import com.cm.bluetooth.data.reqeust.ControlPacket
-import com.cm.bluetooth.data.reqeust.ControlTarget
 import com.cm.bluetooth.data.reqeust.TrainingMode
 import com.cm.bluetooth.data.reqeust.TrainingModeRequest
 import com.cm.naviconnector.feature.AppEffect
@@ -154,19 +152,14 @@ class MainViewModel @Inject constructor(
 
     fun onPowerButtonClick() {
         if (!_uiState.value.isConnected) return
-        enableAllFeatures()
+        val isPowerOn = _uiState.value.isPowerOn
+        setAllFeaturesEnabled(!isPowerOn)
     }
 
-    private fun enableAllFeatures() {
-        _uiState.update { currentState ->
-            currentState.copy(
-                features = mapOf(
-                    Feature.HEATER to FeatureState(enabled = true, level = 1),
-                    Feature.AUDIO to FeatureState(enabled = true, level = 1),
-                    Feature.FAN to FeatureState(enabled = true, level = 1),
-                    Feature.FILM to FeatureState(enabled = true, level = 1),
-                )
-            )
+    private fun setAllFeaturesEnabled(enabled: Boolean) {
+        val level = if (enabled) 1 else 0
+        _uiState.update {
+            it.copy(features = Feature.entries.associateWith { FeatureState(enabled, level) })
         }
     }
 

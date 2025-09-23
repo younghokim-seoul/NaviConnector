@@ -111,11 +111,11 @@ fun MainScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             TopButtonType.entries.forEach { buttonType ->
                 val tint = when (buttonType) {
-                    TopButtonType.POWER -> if (uiState.powerActive) activeColor else inactiveColor
+                    TopButtonType.POWER -> if (uiState.isPowerOn) activeColor else inactiveColor
                     else -> if (uiState.isConnected) activeColor else inactiveColor
                 }
                 val enabled = when (buttonType) {
-                    TopButtonType.POWER -> uiState.powerActive
+                    TopButtonType.POWER -> uiState.isPowerOn
                     TopButtonType.BLUETOOTH -> true
                     else -> uiState.isConnected
                 }
