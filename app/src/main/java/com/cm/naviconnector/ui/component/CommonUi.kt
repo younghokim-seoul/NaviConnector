@@ -124,10 +124,16 @@ fun RectangleButton(
 
 @Composable
 fun PlaylistPanel(modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(8.dp)
     Box(
         modifier = modifier
             .height(148.dp)
-            .background(Color.White, shape = RoundedCornerShape(8.dp)),
+            .shadow(
+                elevation = 6.dp,
+                shape = shape,
+                clip = false
+            )
+            .background(Color.White, shape),
         contentAlignment = Alignment.Center
     ) {
         Text("PLAY LIST", fontSize = 16.sp, color = Color.Black, fontWeight = FontWeight.Bold)

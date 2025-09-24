@@ -76,12 +76,12 @@ class MainViewModel @Inject constructor(
             }
 
             is AppEvent.OnFeatureTapped -> {
-                if (!_uiState.value.isConnected) return
+                if (!_uiState.value.isPowerOn) return
                 _uiState.update { it.copy(currentFeature = event.feature) }
             }
 
             is AppEvent.OnDialChanged -> {
-                if (!_uiState.value.isConnected) return
+                if (!_uiState.value.isPowerOn) return
 
                 val currentFeature = _uiState.value.currentFeature ?: return
                 val newLevel = event.level
@@ -113,16 +113,9 @@ class MainViewModel @Inject constructor(
             }
 
             is AppEvent.OnBottomButtonTapped -> {
+                if (!_uiState.value.isPowerOn) return
                 _uiState.update { it.copy(isPlaying = true) } // TODO: handle play/pause state
             }
-        }
-    }
-
-    fun startScan() = viewModelScope.launch {
-        if (bluetoothClient.startScan() == true) {
-            _scannedDevices.update { bluetoothClient.bondedDevices()?.toList().orEmpty() }
-        } else {
-            _effects.send(AppEffect.ShowToast("블루투스 스캔에 실패했습니다"))
         }
     }
 

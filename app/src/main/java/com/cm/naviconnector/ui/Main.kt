@@ -115,7 +115,7 @@ fun MainScreen(
                     else -> if (uiState.isConnected) activeColor else inactiveColor
                 }
                 val enabled = when (buttonType) {
-                    TopButtonType.POWER -> uiState.isPowerOn
+                    TopButtonType.BLUETOOTH -> true
                     else -> uiState.isConnected
                 }
 
@@ -133,7 +133,6 @@ fun MainScreen(
         val currentFeature = uiState.currentFeature
         val currentFeatureState = uiState.features[currentFeature]
         val pointerShadowColor = currentFeature?.color ?: LightGrayishBlue
-        val buttonColor = if (currentFeatureState?.isActive == true) activeColor else inactiveColor
         val level = currentFeatureState?.level ?: 0
 
         Row(
@@ -146,7 +145,7 @@ fun MainScreen(
                 value = level,
                 onValueChange = { onEvent(AppEvent.OnDialChanged(it)) },
                 pointerShadowColor = pointerShadowColor,
-                enabled = currentFeature != null
+                enabled = uiState.currentFeature != null && uiState.isPowerOn
             )
             Image(painter = painterResource(id = R.drawable.dog), contentDescription = "Dog")
         }
@@ -155,11 +154,14 @@ fun MainScreen(
 
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             Feature.entries.forEach { feature ->
+                val featureState = uiState.features[feature]
+                val tint = if (featureState?.isActive == true) activeColor else inactiveColor
+
                 CircleButton(
                     painter = painterResource(id = feature.icon),
                     onClick = { onEvent(AppEvent.OnFeatureTapped(feature)) },
-                    tint = buttonColor,
-                    enabled = uiState.isConnected
+                    tint = tint,
+                    enabled = uiState.isPowerOn
                 )
             }
         }

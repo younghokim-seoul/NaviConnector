@@ -62,9 +62,7 @@ class MainActivity : ComponentActivity() {
                 .setDeniedMessage("권한을 거부하셨습니다.\n[설정] > [권한]에서 직접 권한을 허용해주세요.")
                 .check()
 
-            if (permissionResult.isGranted) {
-                viewModel.startScan()
-            } else {
+            if (!permissionResult.isGranted) {
                 finish()
             }
         }

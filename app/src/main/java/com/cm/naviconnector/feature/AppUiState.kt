@@ -10,5 +10,5 @@ data class AppUiState(
     val isConnected: Boolean = false,
 ) {
     val isPowerOn
-        get() = features.values.any { it.enabled }
+        get() = isConnected && features.values.any { it.enabled }
 }

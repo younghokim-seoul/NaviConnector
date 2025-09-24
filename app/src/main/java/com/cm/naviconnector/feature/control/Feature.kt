@@ -10,7 +10,10 @@ import com.cm.naviconnector.ui.theme.Goldenrod
 import com.cm.naviconnector.ui.theme.Indigo
 import com.cm.naviconnector.ui.theme.Rose
 
-enum class Feature(@DrawableRes val icon: Int, @ColorInt val color: Color) {
+enum class Feature(
+    @get:DrawableRes override val icon: Int,
+    @get:ColorInt val color: Color
+) : ControlButton {
     HEATER(R.drawable.heater, Rose),
     AUDIO(R.drawable.audio, Aqua),
     FAN(R.drawable.fan, Indigo),
