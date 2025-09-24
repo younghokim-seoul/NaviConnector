@@ -8,7 +8,6 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.cm.bluetooth.BluetoothClient
 import com.cm.bluetooth.data.reqeust.ControlPacket
-import com.cm.bluetooth.data.reqeust.ControlTarget
 import com.cm.bluetooth.data.reqeust.TrainingMode
 import com.cm.bluetooth.data.reqeust.TrainingModeRequest
 import com.cm.naviconnector.feature.AppEffect
@@ -113,9 +112,9 @@ class MainViewModel @Inject constructor(
                 _uiState.update { it.copy(isConnected = true) }
             }
 
-            AppEvent.OnPlayClicked -> _uiState.update { it.copy(isPlaying = true) }
-
-            AppEvent.OnPauseClicked -> _uiState.update { it.copy(isPlaying = false) }
+            is AppEvent.OnBottomButtonTapped -> {
+                _uiState.update { it.copy(isPlaying = true) } // TODO: handle play/pause state
+            }
         }
     }
 

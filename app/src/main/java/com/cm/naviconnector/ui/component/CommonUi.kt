@@ -20,9 +20,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,10 +59,16 @@ fun CircleButton(
     tint: Color = Color.Unspecified,
     enabled: Boolean = true
 ) {
+    val shape = CircleShape
     Box(
         modifier = modifier
             .size(60.dp)
-            .clip(CircleShape)
+            .shadow(
+                elevation = 6.dp,
+                shape = shape,
+                clip = false
+            )
+            .clip(shape)
             .background(Color.White)
             .combinedClickable(
                 onClick = onClick,
@@ -73,6 +82,42 @@ fun CircleButton(
             contentDescription = null,
             tint = tint,
             modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun RectangleButton(
+    painter: Painter,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = Color.Unspecified,
+    enabled: Boolean = true
+) {
+    val shape = RoundedCornerShape(16.dp)
+    Box(
+        modifier = modifier
+            .size(60.dp)
+            .shadow(
+                elevation = 6.dp,
+                shape = shape,
+                clip = false
+            )
+            .clip(shape)
+            .background(Color.White)
+            .combinedClickable(
+                onClick = onClick,
+                enabled = enabled
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painter,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit,
+            colorFilter = if (tint != Color.Unspecified) ColorFilter.tint(tint) else null
         )
     }
 }

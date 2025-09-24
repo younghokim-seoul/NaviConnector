@@ -32,11 +32,13 @@ import com.cm.naviconnector.R
 import com.cm.naviconnector.feature.AppEffect
 import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
+import com.cm.naviconnector.feature.control.BottomButtonType
 import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.ui.component.CircleButton
 import com.cm.naviconnector.ui.component.CircularSeekbar
 import com.cm.naviconnector.ui.component.PlaylistPanel
+import com.cm.naviconnector.ui.component.RectangleButton
 import com.cm.naviconnector.ui.component.TopBar
 import com.cm.naviconnector.ui.dialog.AudioListDialog
 import com.cm.naviconnector.ui.dialog.DeviceListDialog
@@ -171,18 +173,14 @@ fun MainScreen(
                 .padding(horizontal = 30.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(28.dp)) {
-                CircleButton(
-                    painter = painterResource(id = R.drawable.play),
-                    onClick = { onEvent(AppEvent.OnPlayClicked) },
-                    modifier = Modifier.size(60.dp),
-                    enabled = uiState.isConnected
-                )
-                CircleButton(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    onClick = { onEvent(AppEvent.OnPauseClicked) },
-                    modifier = Modifier.size(60.dp),
-                    enabled = uiState.isConnected
-                )
+                BottomButtonType.entries.forEach { buttonType ->
+                    RectangleButton(
+                        painter = painterResource(id = buttonType.icon),
+                        onClick = { onEvent(AppEvent.OnBottomButtonTapped(buttonType)) },
+                        modifier = Modifier.size(60.dp),
+                        enabled = uiState.isConnected
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(16.dp))
             PlaylistPanel(modifier = Modifier.weight(1f))
