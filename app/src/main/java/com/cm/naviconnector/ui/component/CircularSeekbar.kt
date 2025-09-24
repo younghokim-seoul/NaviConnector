@@ -28,6 +28,7 @@ fun CircularSeekbar(
     value: Int,
     onValueChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     min: Int = 0,
     max: Int = 10,
     outerSize: Dp = 220.dp,
@@ -105,6 +106,7 @@ fun CircularSeekbar(
             update = { view ->
                 if (view.progress.toInt() != value) view.progress = value.toFloat()
 
+                view.isEnabled = enabled
                 view.pointerColor = Color.White.toArgb()
                 view.pointerStrokeWidth = pointerWidth.toPx(density)
             }

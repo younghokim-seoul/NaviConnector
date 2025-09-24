@@ -84,12 +84,12 @@ class MainViewModel @Inject constructor(
             is AppEvent.OnDialChanged -> {
                 if (!_uiState.value.isConnected) return
 
-                val currentFeature = _uiState.value.currentFeature
+                val currentFeature = _uiState.value.currentFeature ?: return
                 val newLevel = event.level
 
                 val controlTarget = currentFeature.toControlTargetOrNull()
                 if (controlTarget != null) {
-                    
+
                     val packet = ControlPacket(target = controlTarget, value = newLevel)
                     val isSuccess = bluetoothConnection?.sendPacket(packet.toByteArray())
 
