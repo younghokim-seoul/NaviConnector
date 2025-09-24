@@ -132,7 +132,7 @@ fun MainScreen(
 
         val currentFeature = uiState.currentFeature
         val currentFeatureState = uiState.features[currentFeature]
-        val pointerShadowColor = currentFeature?.color ?: LightGrayishBlue
+        val accentColor = currentFeature?.color ?: Color.LightGray
         val level = currentFeatureState?.level ?: 0
 
         Row(
@@ -143,8 +143,8 @@ fun MainScreen(
             Image(painter = painterResource(id = R.drawable.cat), contentDescription = "Cat")
             CircularSeekbar(
                 value = level,
-                onValueChange = { onEvent(AppEvent.OnDialChanged(it)) },
-                pointerShadowColor = pointerShadowColor,
+                onValueChangeFinished = { onEvent(AppEvent.OnDialChanged(it)) },
+                accentColor = accentColor,
                 enabled = uiState.currentFeature != null && uiState.isPowerOn
             )
             Image(painter = painterResource(id = R.drawable.dog), contentDescription = "Dog")

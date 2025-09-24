@@ -86,23 +86,22 @@ class MainViewModel @Inject constructor(
                 val currentFeature = _uiState.value.currentFeature ?: return
                 val newLevel = event.level
 
+                _uiState.update { currentState ->
+                    val newFeatures = currentState.features.toMutableMap()
+                    val currentFeatureState = newFeatures[currentFeature]
+                    if (currentFeatureState != null && currentFeatureState.enabled) {
+                        newFeatures[currentFeature] =
+                            currentFeatureState.copy(level = newLevel)
+                    }
+                    currentState.copy(features = newFeatures)
+                }
+
                 val controlTarget = currentFeature.toControlTargetOrNull()
                 if (controlTarget != null) {
-
                     val packet = ControlPacket(target = controlTarget, value = newLevel)
                     val isSuccess = bluetoothConnection?.sendPacket(packet.toByteArray())
 
-                    if (isSuccess == true) {
-                        _uiState.update { currentState ->
-                            val newFeatures = currentState.features.toMutableMap()
-                            val currentFeatureState = newFeatures[currentFeature]
-                            if (currentFeatureState != null && currentFeatureState.enabled) {
-                                newFeatures[currentFeature] =
-                                    currentFeatureState.copy(level = newLevel)
-                            }
-                            currentState.copy(features = newFeatures)
-                        }
-                    } else {
+                    if (isSuccess != true) {
                         _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
                     }
                 }
