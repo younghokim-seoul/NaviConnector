@@ -36,6 +36,7 @@ import com.cm.naviconnector.feature.AppUiState
 import com.cm.naviconnector.feature.control.BottomButtonType
 import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.TopButtonType
+import com.cm.naviconnector.feature.upload.UploadState
 import com.cm.naviconnector.ui.component.CircleButton
 import com.cm.naviconnector.ui.component.CircularSeekbar
 import com.cm.naviconnector.ui.component.PlaylistPanel
@@ -43,6 +44,7 @@ import com.cm.naviconnector.ui.component.RectangleButton
 import com.cm.naviconnector.ui.component.TopBar
 import com.cm.naviconnector.ui.dialog.AudioListDialog
 import com.cm.naviconnector.ui.dialog.DeviceListDialog
+import com.cm.naviconnector.ui.dialog.UploadProgressDialog
 import com.cm.naviconnector.ui.theme.LightGrayishBlue
 import com.cm.naviconnector.ui.theme.Navy
 
@@ -53,12 +55,23 @@ fun MainRoute(vm: MainViewModel = hiltViewModel()) {
 
     var showDeviceDialog by rememberSaveable { mutableStateOf(false) }
     var showAudioDialog by rememberSaveable { mutableStateOf(false) }
+    var showUploadDialog by rememberSaveable { mutableStateOf(false) }
+
+    val uiState = vm.uiState.collectAsStateWithLifecycle().value
+
+    HandleDialogs(
+        vm = vm,
+        showDeviceDialog = showDeviceDialog,
+        showAudioDialog = showAudioDialog,
+        showUploadDialog = showUploadDialog
+    )
 
     LaunchedEffect(vm) {
         vm.effects.collect { effect ->
             when (effect) {
                 is AppEffect.SetDeviceDialogVisible -> showDeviceDialog = effect.visible
                 is AppEffect.SetAudioDialogVisible -> showAudioDialog = effect.visible
+                is AppEffect.SetUploadDialogVisible -> showUploadDialog = effect.visible
                 is AppEffect.ShowToast -> Toast.makeText(
                     currentContext,
                     effect.message,
@@ -68,6 +81,19 @@ fun MainRoute(vm: MainViewModel = hiltViewModel()) {
         }
     }
 
+    MainScreen(
+        uiState = uiState,
+        onEvent = vm::onEvent
+    )
+}
+
+@Composable
+private fun HandleDialogs(
+    vm: MainViewModel,
+    showDeviceDialog: Boolean,
+    showAudioDialog: Boolean,
+    showUploadDialog: Boolean
+) {
     if (showDeviceDialog) {
         val devices by vm.scannedDevices.collectAsStateWithLifecycle()
         DeviceListDialog(
@@ -84,12 +110,13 @@ fun MainRoute(vm: MainViewModel = hiltViewModel()) {
         )
     }
 
-    val uiState = vm.uiState.collectAsStateWithLifecycle().value
-
-    MainScreen(
-        uiState = uiState,
-        onEvent = vm::onEvent
-    )
+    if (showUploadDialog) {
+        val uploadState = vm.uiState.collectAsStateWithLifecycle().value.uploadState
+        when (uploadState) {
+            is UploadState.InProgress -> UploadProgressDialog(progress = uploadState.progress)
+            is UploadState.Idle -> Unit
+        }
+    }
 }
 
 @Composable

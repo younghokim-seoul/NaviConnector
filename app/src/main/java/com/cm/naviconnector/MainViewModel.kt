@@ -2,14 +2,19 @@ package com.cm.naviconnector
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.content.ContentResolver
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.cm.bluetooth.BluetoothClient
 import com.cm.bluetooth.data.reqeust.ControlPacket
+import com.cm.bluetooth.data.reqeust.RequestPacket
 import com.cm.bluetooth.data.reqeust.TrainingMode
 import com.cm.bluetooth.data.reqeust.TrainingModeRequest
+import com.cm.bluetooth.data.reqeust.UploadDoingRequest
+import com.cm.bluetooth.data.reqeust.UploadEndRequest
+import com.cm.bluetooth.data.reqeust.UploadStartRequest
 import com.cm.naviconnector.feature.AppEffect
 import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
@@ -20,10 +25,13 @@ import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.FeatureState
 import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.feature.control.toControlTargetOrNull
+import com.cm.naviconnector.feature.upload.UploadState
 import com.cm.naviconnector.util.sendAll
+import com.cm.naviconnector.util.trySendAll
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,10 +50,12 @@ import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val bluetoothClient: BluetoothClient,
+    private val contentResolver: ContentResolver,
     audioRepository: AudioRepository
 ) : ViewModel() {
 
@@ -82,9 +92,9 @@ class MainViewModel @Inject constructor(
             is AppEvent.TopButtonClicked -> {
                 when (event.type) {
                     TopButtonType.POWER -> onPowerButtonClick()
-                    TopButtonType.BLUETOOTH -> onBluetoothButtonClick()
+                    TopButtonType.BLUETOOTH -> showDeviceDialog()
                     TopButtonType.WIFI -> onWifiButtonClick()
-                    TopButtonType.UPLOAD -> onUploadButtonClick()
+                    TopButtonType.UPLOAD -> showAudioDialog()
                 }
             }
 
@@ -111,7 +121,7 @@ class MainViewModel @Inject constructor(
 
                 viewModelScope.launch {
                     val isSuccess = sendControlPacket(currentFeature, newLevel)
-                    if (isSuccess != true) {
+                    if (!isSuccess) {
                         _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
                     }
                 }
@@ -130,7 +140,7 @@ class MainViewModel @Inject constructor(
             }
 
             is AppEvent.AudioUploadClicked -> {
-                sendAudioFile(event.file)
+                onUploadClick(event.file)
             }
         }
     }
@@ -157,7 +167,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun onPowerButtonClick() {
+    private fun onPowerButtonClick() {
         if (!_uiState.value.isConnected) return
         val isPowerOn = _uiState.value.isPowerOn
         setAllFeaturesEnabled(!isPowerOn)
@@ -176,25 +186,79 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun onBluetoothButtonClick() {
+    private fun showDeviceDialog() {
         val bondedDevices = bluetoothClient.bondedDevices()
         _scannedDevices.update { bondedDevices?.toList() ?: emptyList() }
         _effects.trySend(AppEffect.SetDeviceDialogVisible(true))
     }
 
-    fun onWifiButtonClick() {
+    private fun onWifiButtonClick() {
 
     }
 
-    fun onUploadButtonClick() {
+    private fun showAudioDialog() {
         _effects.trySend(AppEffect.SetAudioDialogVisible(true))
     }
 
-    private fun sendAudioFile(file: AudioFile) {
+    private fun onUploadClick(file: AudioFile) {
+        viewModelScope.launch {
+            _effects.send(AppEffect.SetUploadDialogVisible(true)) // TODO: 업로드 이벤트와 상태가 따로 관리되는 문제
+            _uiState.update { it.copy(uploadState = UploadState.InProgress(0)) }
 
+            val isSuccess = runCatching {
+                withContext(Dispatchers.IO) {
+                    sendAudioFile(file)
+                }
+            }.fold(
+                onSuccess = { it },
+                onFailure = { e ->
+                    if (e is CancellationException) throw e
+                    Timber.e(e, "upload failed")
+                    false
+                }
+            )
+
+            withContext(NonCancellable) {
+                _uiState.update { it.copy(uploadState = UploadState.Idle) }
+
+                val message = if (isSuccess) "오디오 업로드에 성공했습니다" else "오디오 업로드에 실패했습니다"
+                _effects.trySendAll(
+                    AppEffect.SetUploadDialogVisible(false),
+                    AppEffect.ShowToast(message)
+                )
+            }
+        }
     }
 
-    fun setPlaying(isPlaying: Boolean) {
+    private suspend fun sendAudioFile(file: AudioFile): Boolean = withContext(Dispatchers.IO) {
+        val audioBytes = contentResolver.openInputStream(file.uri)?.use { it.readBytes() }
+            ?: return@withContext false
+
+        val chunkSize = 2048
+        val chunks = audioBytes.asList().chunked(chunkSize)
+        val totalFrames = chunks.size
+
+        if (!sendPacket(UploadStartRequest(file.name, totalFrames))) return@withContext false
+
+        chunks.forEachIndexed { index, chunk ->
+            if (!sendPacket(
+                    UploadDoingRequest(
+                        frameNumber = index,
+                        frameData = chunk.toByteArray()
+                    )
+                )
+            ) return@withContext false
+
+            val progress = ((index + 1) * 100) / totalFrames
+            withContext(Dispatchers.Main) {
+                _uiState.update { it.copy(uploadState = UploadState.InProgress(progress)) }
+            }
+        }
+
+        return@withContext sendPacket(UploadEndRequest(file.name))
+    }
+
+    private fun setPlaying(isPlaying: Boolean) {
         _uiState.update { it.copy(isPlaying = isPlaying) }
         viewModelScope.launch {
 //            val packet = PlayAudioRequest()
@@ -214,6 +278,14 @@ class MainViewModel @Inject constructor(
                 false
             }
         }
+
+    private suspend fun sendPacket(packet: RequestPacket): Boolean = withContext(Dispatchers.IO) {
+        val isSuccess = bluetoothConnection?.sendPacket(packet.toByteArray()) == true
+        if (!isSuccess) {
+            Timber.e("sendPacket failed: $packet")
+        }
+        return@withContext isSuccess
+    }
 
     private fun observeConnectionState() {
         viewModelScope.launch {
