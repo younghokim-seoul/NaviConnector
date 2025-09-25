@@ -11,6 +11,7 @@ import com.cm.bluetooth.BluetoothClient
 import com.cm.bluetooth.data.reqeust.ControlPacket
 import com.cm.bluetooth.data.reqeust.GetAudioListRequest
 import com.cm.bluetooth.data.reqeust.RequestPacket
+import com.cm.bluetooth.data.reqeust.SetVolumeRequest
 import com.cm.bluetooth.data.reqeust.StatusInfoRequest
 import com.cm.bluetooth.data.reqeust.TrainingMode
 import com.cm.bluetooth.data.reqeust.TrainingModeRequest
@@ -282,6 +283,10 @@ class MainViewModel @Inject constructor(
 
     private suspend fun sendControlPacket(feature: Feature, level: Int): Boolean =
         withContext(Dispatchers.IO) {
+            if (feature == Feature.AUDIO) {
+                return@withContext sendPacket(SetVolumeRequest(level))
+            }
+
             val controlTarget = feature.toControlTargetOrNull()
             return@withContext if (controlTarget != null) {
                 val packet = ControlPacket(target = controlTarget, value = level)
