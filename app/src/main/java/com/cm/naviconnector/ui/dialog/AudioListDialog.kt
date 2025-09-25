@@ -1,6 +1,5 @@
 package com.cm.naviconnector.ui.dialog
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -36,7 +36,7 @@ import com.cm.naviconnector.util.formatDuration
 @Composable
 fun AudioListDialog(
     audioFiles: LazyPagingItems<AudioFile>,
-    onAudioFileClick: (AudioFile) -> Unit,
+    onUploadClick: (AudioFile) -> Unit,
 ) {
     Dialog(
         onDismissRequest = {},
@@ -66,7 +66,7 @@ fun AudioListDialog(
                 if (audioFiles.itemCount == 0) {
                     NoAudioFileView()
                 } else {
-                    AudioFileListView(audioFiles = audioFiles, onAudioFileClick = onAudioFileClick)
+                    AudioFileListView(audioFiles = audioFiles, onUploadClick = onUploadClick)
                 }
             }
         }
@@ -92,7 +92,7 @@ fun NoAudioFileView() {
 @Composable
 fun ColumnScope.AudioFileListView(
     audioFiles: LazyPagingItems<AudioFile>,
-    onAudioFileClick: (AudioFile) -> Unit
+    onUploadClick: (AudioFile) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -133,7 +133,7 @@ fun ColumnScope.AudioFileListView(
             if (audioFile != null) {
                 AudioFileItem(
                     audioFile = audioFile,
-                    onAudioFileClick = { onAudioFileClick(audioFile) })
+                    onUploadClick = { onUploadClick(audioFile) })
                 if (index < audioFiles.itemCount - 1) {
                     HorizontalDivider()
                 }
@@ -143,11 +143,10 @@ fun ColumnScope.AudioFileListView(
 }
 
 @Composable
-fun AudioFileItem(audioFile: AudioFile, onAudioFileClick: () -> Unit) {
+fun AudioFileItem(audioFile: AudioFile, onUploadClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onAudioFileClick() }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -165,6 +164,10 @@ fun AudioFileItem(audioFile: AudioFile, onAudioFileClick: () -> Unit) {
                 fontSize = 14.sp,
                 color = Color.Gray
             )
+        }
+
+        Button(onClick = onUploadClick) {
+            Text("업로드")
         }
     }
 }

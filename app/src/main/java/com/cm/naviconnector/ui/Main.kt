@@ -72,7 +72,7 @@ fun MainRoute(vm: MainViewModel = hiltViewModel()) {
         val devices by vm.scannedDevices.collectAsStateWithLifecycle()
         DeviceListDialog(
             devices = devices,
-            onConnectClick = { vm.onClickDevice(it) }
+            onConnectClick = { vm.onEvent(AppEvent.DeviceConnectClicked(it)) }
         )
     }
 
@@ -80,7 +80,7 @@ fun MainRoute(vm: MainViewModel = hiltViewModel()) {
         val audioFiles = vm.audioPaging.collectAsLazyPagingItems()
         AudioListDialog(
             audioFiles = audioFiles,
-            onAudioFileClick = { vm.onAudioFileClick(it) },
+            onUploadClick = { vm.onEvent(AppEvent.AudioUploadClicked(it)) },
         )
     }
 
@@ -122,7 +122,7 @@ fun MainScreen(
 
                 CircleButton(
                     painter = painterResource(id = buttonType.icon),
-                    onClick = { onEvent(AppEvent.OnTopButtonTapped(buttonType)) },
+                    onClick = { onEvent(AppEvent.TopButtonClicked(buttonType)) },
                     enabled = enabled,
                     tint = tint
                 )
@@ -144,7 +144,7 @@ fun MainScreen(
             Image(painter = painterResource(id = R.drawable.cat), contentDescription = "Cat")
             CircularSeekbar(
                 value = level,
-                onValueChangeFinished = { onEvent(AppEvent.OnDialChanged(it)) },
+                onValueChangeFinished = { onEvent(AppEvent.DialChanged(it)) },
                 accentColor = accentColor,
                 enabled = uiState.currentFeature != null && uiState.isPowerOn
             )
@@ -160,7 +160,7 @@ fun MainScreen(
 
                 CircleButton(
                     painter = painterResource(id = feature.icon),
-                    onClick = { onEvent(AppEvent.OnFeatureTapped(feature)) },
+                    onClick = { onEvent(AppEvent.FeatureSelected(feature)) },
                     tint = tint,
                     enabled = uiState.isPowerOn
                 )
@@ -182,7 +182,7 @@ fun MainScreen(
 
                     RectangleButton(
                         painter = painterResource(id = painterId),
-                        onClick = { onEvent(AppEvent.OnBottomButtonTapped(buttonType)) },
+                        onClick = { onEvent(AppEvent.BottomButtonClicked(buttonType)) },
                         modifier = Modifier.size(60.dp),
                         enabled = uiState.isConnected
                     )
