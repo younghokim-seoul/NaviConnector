@@ -3,6 +3,7 @@ package com.cm.naviconnector.ui.component
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -28,9 +31,11 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cm.naviconnector.R
+import com.cm.naviconnector.feature.control.PlaylistItem
 import com.cm.naviconnector.ui.theme.LightBlueish
 import com.cm.naviconnector.ui.theme.LightPurple
 
@@ -123,7 +128,12 @@ fun RectangleButton(
 }
 
 @Composable
-fun PlaylistPanel(modifier: Modifier = Modifier) {
+fun PlaylistPanel(
+    modifier: Modifier = Modifier,
+    playlist: List<PlaylistItem>,
+    selectedFileName: String?,
+    onItemClick: (PlaylistItem) -> Unit
+) {
     val shape = RoundedCornerShape(8.dp)
     Box(
         modifier = modifier
@@ -133,10 +143,53 @@ fun PlaylistPanel(modifier: Modifier = Modifier) {
                 shape = shape,
                 clip = false
             )
-            .background(Color.White, shape),
-        contentAlignment = Alignment.Center
+            .background(Color.White, shape)
     ) {
-        Text("PLAY LIST", fontSize = 16.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+        if (playlist.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "PLAY LIST",
+                    fontSize = 16.sp,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        } else {
+            LazyColumn(modifier = Modifier.padding(vertical = 8.dp)) {
+                items(playlist, key = { it.fileName }) {
+                    PlaylistItem(
+                        item = it,
+                        isSelected = it.fileName == selectedFileName,
+                        onClick = { onItemClick(it) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlaylistItem(
+    item: PlaylistItem,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (isSelected) Color.LightGray else Color.Transparent
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundColor)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = item.fileName,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

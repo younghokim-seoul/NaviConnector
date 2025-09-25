@@ -35,6 +35,7 @@ import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
 import com.cm.naviconnector.feature.control.BottomButtonType
 import com.cm.naviconnector.feature.control.Feature
+import com.cm.naviconnector.feature.control.PlaylistItem
 import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.feature.upload.UploadState
 import com.cm.naviconnector.ui.component.CircleButton
@@ -215,8 +216,22 @@ fun MainScreen(
                     )
                 }
             }
+
             Spacer(modifier = Modifier.width(16.dp))
-            PlaylistPanel(modifier = Modifier.weight(1f))
+
+            PlaylistPanel(
+                modifier = Modifier.weight(1f),
+                playlist = listOf(
+                    PlaylistItem("NABI.mp3"),
+                    PlaylistItem("Running in the 90s.mp3"),
+                    PlaylistItem("Deja Vu.mp3"),
+                    PlaylistItem("Gas Gas Gas.mp3"),
+                    PlaylistItem("Night of Fire.mp3"),
+                    PlaylistItem("The Top.mp3"),
+                ),
+                selectedFileName = uiState.selectedFileName,
+                onItemClick = { onEvent(AppEvent.PlaylistItemClicked(it)) }
+            )
         }
 
         Spacer(modifier = Modifier.height(30.dp))

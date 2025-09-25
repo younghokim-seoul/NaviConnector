@@ -10,9 +10,11 @@ import androidx.paging.cachedIn
 import com.cm.bluetooth.BluetoothClient
 import com.cm.bluetooth.data.reqeust.ControlPacket
 import com.cm.bluetooth.data.reqeust.GetAudioListRequest
+import com.cm.bluetooth.data.reqeust.PlayAudioRequest
 import com.cm.bluetooth.data.reqeust.RequestPacket
 import com.cm.bluetooth.data.reqeust.SetVolumeRequest
 import com.cm.bluetooth.data.reqeust.StatusInfoRequest
+import com.cm.bluetooth.data.reqeust.StopAudioRequest
 import com.cm.bluetooth.data.reqeust.TrainingMode
 import com.cm.bluetooth.data.reqeust.TrainingModeRequest
 import com.cm.bluetooth.data.reqeust.UploadDoingRequest
@@ -103,13 +105,10 @@ class MainViewModel @Inject constructor(
             }
 
             is AppEvent.FeatureSelected -> {
-                if (!_uiState.value.isPowerOn) return
                 _uiState.update { it.copy(currentFeature = event.feature) }
             }
 
             is AppEvent.DialChanged -> {
-                if (!_uiState.value.isPowerOn) return
-
                 val currentFeature = _uiState.value.currentFeature ?: return
                 val newLevel = event.level
 
@@ -136,7 +135,6 @@ class MainViewModel @Inject constructor(
             }
 
             is AppEvent.BottomButtonClicked -> {
-                if (!_uiState.value.isConnected) return
                 when (event.type) {
                     BottomButtonType.PLAY -> setPlaying(true)
                     BottomButtonType.PAUSE -> setPlaying(false)
@@ -145,6 +143,17 @@ class MainViewModel @Inject constructor(
 
             is AppEvent.AudioUploadClicked -> {
                 onUploadClick(event.file)
+            }
+
+            is AppEvent.PlaylistItemClicked -> {
+                _uiState.update {
+                    it.copy(
+                        playerState = it.playerState.copy(
+                            selectedFileName = event.item.fileName,
+                            isPlaying = false
+                        )
+                    )
+                }
             }
         }
     }
@@ -183,7 +192,6 @@ class MainViewModel @Inject constructor(
     }
 
     private fun onPowerButtonClick() {
-        if (!_uiState.value.isConnected) return
         val isPowerOn = _uiState.value.isPowerOn
         setAllFeaturesEnabled(!isPowerOn)
     }
@@ -272,12 +280,20 @@ class MainViewModel @Inject constructor(
     }
 
     private fun setPlaying(isPlaying: Boolean) {
-        _uiState.update { it.copy(isPlaying = isPlaying) }
-        viewModelScope.launch {
-//            val packet = PlayAudioRequest()
-//            if (isSuccess != true) {
-//                _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
-//            }
+        val selectedFileName = _uiState.value.playerState.selectedFileName
+        if (selectedFileName == null) {
+            _effects.trySend(AppEffect.ShowToast("재생할 곡을 선택해주세요"))
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val audioPacket =
+                if (isPlaying) PlayAudioRequest(selectedFileName) else StopAudioRequest()
+            if (sendPacket(audioPacket)) {
+                _uiState.update { it.copy(playerState = it.playerState.copy(isPlaying = isPlaying)) }
+            } else {
+                _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
+            }
         }
     }
 
@@ -334,7 +350,7 @@ class MainViewModel @Inject constructor(
                 .collect { state ->
                     when (state) {
                         BluetoothAdapter.STATE_DISCONNECTED -> {
-                            _uiState.update { it.copy(isConnected = false, isPlaying = false) }
+                            resetUiState()
                             _effects.trySend(AppEffect.ShowToast("장치와 연결이 해제되었습니다"))
                         }
 
@@ -362,5 +378,9 @@ class MainViewModel @Inject constructor(
                     Timber.d("received packet: $packet")
                 }
         }
+    }
+
+    private fun resetUiState() {
+        _uiState.value = AppUiState()
     }
 }
