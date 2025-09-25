@@ -39,11 +39,12 @@ fun CircularSeekbar(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     min: Int = 0,
-    max: Int = 10,
+    max: Int = 255,
     outerSize: Dp = 220.dp,
     innerSize: Dp = 100.dp,
     pointerWidth: Dp = 32.dp,
     startAngle: Float = 90f,
+    endEAngle: Float = 90f,
     accentColor: Color = Color.LightGray,
 ) {
     val density = LocalDensity.current
@@ -86,7 +87,7 @@ fun CircularSeekbar(
                     progress = value.toFloat()
 
                     this.startAngle = startAngle
-                    endAngle = startAngle
+                    this.endAngle = endEAngle
 
                     circleColor = Color.Transparent.toArgb()
                     circleProgressColor = Color.Transparent.toArgb()
