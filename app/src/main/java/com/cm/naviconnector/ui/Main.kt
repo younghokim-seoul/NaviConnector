@@ -176,8 +176,11 @@ fun MainScreen(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(28.dp)) {
                 BottomButtonType.entries.forEach { buttonType ->
+                    val painterId =
+                        if (uiState.isConnected) buttonType.enabledIcon else buttonType.disabledIcon
+
                     RectangleButton(
-                        painter = painterResource(id = buttonType.icon),
+                        painter = painterResource(id = painterId),
                         onClick = { onEvent(AppEvent.OnBottomButtonTapped(buttonType)) },
                         modifier = Modifier.size(60.dp),
                         enabled = uiState.isConnected
