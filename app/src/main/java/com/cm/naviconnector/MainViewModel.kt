@@ -9,7 +9,9 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.cm.bluetooth.BluetoothClient
 import com.cm.bluetooth.data.reqeust.ControlPacket
+import com.cm.bluetooth.data.reqeust.GetAudioListRequest
 import com.cm.bluetooth.data.reqeust.RequestPacket
+import com.cm.bluetooth.data.reqeust.StatusInfoRequest
 import com.cm.bluetooth.data.reqeust.TrainingMode
 import com.cm.bluetooth.data.reqeust.TrainingModeRequest
 import com.cm.bluetooth.data.reqeust.UploadDoingRequest
@@ -32,6 +34,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -145,25 +148,36 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun connectDevice(device: BluetoothDevice) = viewModelScope.launch {
-        val connected = withContext(Dispatchers.IO) {
-            runCatching {
+    private fun connectDevice(device: BluetoothDevice) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val connected = runCatching {
                 withTimeout(CONNECT_TIMEOUT_MS) {
-                    bluetoothClient.connect(device, uuid)
+                    bluetoothClient.connect(device, uuid).await()
+                    true
                 }
-            }.isSuccess
-        }
+            }.getOrElse { e ->
+                when (e) {
+                    is TimeoutCancellationException -> false
+                    is CancellationException -> throw e
+                    else -> false
+                }
+            }
 
-        if (connected) {
-            // TODO: collectConnectionState로 처리 가능한지 확인 필요
-            _uiState.update { it.copy(isConnected = true) }
-            _effects.sendAll(
-                AppEffect.SetDeviceDialogVisible(false),
-                AppEffect.ShowToast("장치에 연결되었습니다")
-            )
-            bluetoothConnection?.sendPacket(TrainingModeRequest(TrainingMode.RANDOM).toByteArray())
-        } else {
-            _effects.send(AppEffect.ShowToast("장치 연결에 실패했습니다"))
+            if (connected) {
+                // TODO: collectConnectionState로 처리 가능한지 확인 필요
+                _uiState.update { it.copy(isConnected = true) }
+                _effects.sendAll(
+                    AppEffect.SetDeviceDialogVisible(false),
+                    AppEffect.ShowToast("장치에 연결되었습니다")
+                )
+
+                val trainingModePacket = TrainingModeRequest(TrainingMode.RANDOM)
+                if (bluetoothConnection?.sendPacket(trainingModePacket.toByteArray()) != true) {
+                    Timber.e("send TrainingModeRequest failed")
+                }
+            } else {
+                _effects.send(AppEffect.ShowToast("장치 연결에 실패했습니다"))
+            }
         }
     }
 
@@ -206,9 +220,7 @@ class MainViewModel @Inject constructor(
             _uiState.update { it.copy(uploadState = UploadState.InProgress(0)) }
 
             val isSuccess = runCatching {
-                withContext(Dispatchers.IO) {
-                    sendAudioFile(file)
-                }
+                sendAudioFile(file)
             }.fold(
                 onSuccess = { it },
                 onFailure = { e ->
@@ -285,6 +297,26 @@ class MainViewModel @Inject constructor(
             Timber.e("sendPacket failed: $packet")
         }
         return@withContext isSuccess
+    }
+
+    private fun getDeviceStatusInfo() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val isSuccess =
+                bluetoothConnection?.sendPacket(StatusInfoRequest().toByteArray()) == true
+            if (!isSuccess) {
+                Timber.e("getDeviceStatusInfo: sendPacket failed")
+            }
+        }
+    }
+
+    private fun getDeviceAudioList() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val isSuccess =
+                bluetoothConnection?.sendPacket(GetAudioListRequest(10).toByteArray()) == true // TODO: 페이징
+            if (!isSuccess) {
+                Timber.e("getDeviceAudioList: sendPacket failed")
+            }
+        }
     }
 
     private fun observeConnectionState() {
