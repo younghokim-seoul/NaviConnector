@@ -418,8 +418,18 @@ class MainViewModel @Inject constructor(
                         }
 
                         is ParsedPacket.LowBattery -> {
-                            _effects.trySend(AppEffect.ShowToast("배터리 잔량이 ${packet.battery}% 남았습니다"))
-                            getDeviceStatusInfo()
+                            val battery = packet.battery
+                            when {
+                                battery !in 0..100 -> {
+                                    Timber.w("Invalid battery level: $battery")
+                                    return@collect
+                                }
+
+                                battery < 10 -> {
+                                    _effects.trySend(AppEffect.ShowToast("배터리 잔량이 ${battery}% 남았습니다"))
+                                    getDeviceStatusInfo()
+                                }
+                            }
                         }
 
                         is ParsedPacket.StatusInfo -> {
