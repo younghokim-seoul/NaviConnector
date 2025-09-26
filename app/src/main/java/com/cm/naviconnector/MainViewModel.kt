@@ -112,19 +112,19 @@ class MainViewModel @Inject constructor(
                 val currentFeature = _uiState.value.currentFeature ?: return
                 val newLevel = event.level
 
-                _uiState.update { currentState ->
-                    val newFeatures = currentState.features.toMutableMap()
-                    val currentFeatureState = newFeatures[currentFeature]
-                    if (currentFeatureState != null && currentFeatureState.enabled) {
-                        newFeatures[currentFeature] =
-                            currentFeatureState.copy(level = newLevel)
-                    }
-                    currentState.copy(features = newFeatures)
-                }
-
                 viewModelScope.launch {
                     val isSuccess = sendControlPacket(currentFeature, newLevel)
-                    if (!isSuccess) {
+                    if (isSuccess) {
+                        _uiState.update { currentState ->
+                            val newFeatures = currentState.features.toMutableMap()
+                            val currentFeatureState = newFeatures[currentFeature]
+                            if (currentFeatureState != null && currentFeatureState.enabled) {
+                                newFeatures[currentFeature] =
+                                    currentFeatureState.copy(level = newLevel)
+                            }
+                            currentState.copy(features = newFeatures)
+                        }
+                    } else {
                         _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
                     }
                 }
@@ -198,13 +198,22 @@ class MainViewModel @Inject constructor(
 
     private fun setAllFeaturesEnabled(enabled: Boolean) {
         val level = if (enabled) 1 else 0
-        _uiState.update {
-            it.copy(features = Feature.entries.associateWith { FeatureState(enabled, level) })
-        }
 
-        Feature.entries.forEach { feature ->
-            viewModelScope.launch {
-                sendControlPacket(feature, level)
+        viewModelScope.launch {
+            val partialUpdates = buildMap<Feature, FeatureState> {
+                for (f in Feature.entries) {
+                    if (sendControlPacket(f, level)) {
+                        put(f, FeatureState(enabled = enabled, level = level))
+                    }
+                }
+            }
+
+            if (partialUpdates.isNotEmpty()) {
+                _uiState.update { state ->
+                    state.copy(
+                        features = state.features + partialUpdates
+                    )
+                }
             }
         }
     }
@@ -289,9 +298,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val audioPacket =
                 if (isPlaying) PlayAudioRequest(selectedFileName) else StopAudioRequest()
-            if (sendPacket(audioPacket)) {
-                _uiState.update { it.copy(playerState = it.playerState.copy(isPlaying = isPlaying)) }
-            } else {
+            if (!sendPacket(audioPacket)) {
                 _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
             }
         }
@@ -376,11 +383,15 @@ class MainViewModel @Inject constructor(
                 .catch { e -> Timber.e(e, "received failed") }
                 .collect { packet ->
                     Timber.d("received packet: $packet")
+
                 }
         }
     }
 
     private fun resetUiState() {
         _uiState.value = AppUiState()
+    }
+
+    private fun updateFeatureState() { // TODO: 구현 필요
     }
 }
