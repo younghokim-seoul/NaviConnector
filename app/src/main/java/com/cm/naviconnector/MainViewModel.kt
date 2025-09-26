@@ -48,7 +48,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -69,11 +68,6 @@ class MainViewModel @Inject constructor(
     private val contentResolver: ContentResolver,
     audioRepository: AudioRepository
 ) : ViewModel() {
-
-    init {
-        observeConnectionState()
-        observeBluetoothPackets()
-    }
 
     companion object {
         private const val CONNECT_TIMEOUT_MS = 5000L
@@ -100,6 +94,11 @@ class MainViewModel @Inject constructor(
 
     private val bluetoothConnection
         get() = bluetoothClient.getBluetoothConnection()
+
+    init {
+        observeConnectionState()
+        observeBluetoothPackets()
+    }
 
     fun onEvent(event: AppEvent) {
         when (event) {
@@ -171,7 +170,7 @@ class MainViewModel @Inject constructor(
             val connected = runCatching {
                 withTimeout(CONNECT_TIMEOUT_MS) {
                     bluetoothClient.connect(device, uuid).await()
-                    true
+                    bluetoothConnection != null
                 }
             }.getOrElse { e ->
                 when (e) {
@@ -382,21 +381,17 @@ class MainViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeBluetoothPackets() {
         viewModelScope.launch {
-            combine(
-                bluetoothClient.collectConnectionState()
-                    .map { it.state == BluetoothAdapter.STATE_CONNECTED }
-                    .distinctUntilChanged(),
-                uiState
-                    .map { it.isConnected }
-                    .distinctUntilChanged()
-            ) { btConnected, uiConnected ->
-                btConnected && uiConnected
-            }.flatMapLatest { shouldCollect ->
-                if (!shouldCollect) return@flatMapLatest emptyFlow<ParsedPacket>()
-
-                val conn = bluetoothConnection
-                conn?.receivePacket() ?: emptyFlow()
-            }.catch { e -> Timber.e(e, "received failed") }
+            uiState
+                .map { it.isConnected }
+                .distinctUntilChanged()
+                .flatMapLatest { connected ->
+                    if (connected) {
+                        bluetoothConnection?.receivePacket() ?: emptyFlow()
+                    } else {
+                        emptyFlow()
+                    }
+                }
+                .catch { e -> Timber.e(e, "received failed") }
                 .collect { packet ->
                     Timber.d("received packet: $packet")
                     handlePacket(packet)
