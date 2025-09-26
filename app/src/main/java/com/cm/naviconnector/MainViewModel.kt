@@ -20,6 +20,8 @@ import com.cm.bluetooth.data.reqeust.TrainingModeRequest
 import com.cm.bluetooth.data.reqeust.UploadDoingRequest
 import com.cm.bluetooth.data.reqeust.UploadEndRequest
 import com.cm.bluetooth.data.reqeust.UploadStartRequest
+import com.cm.bluetooth.data.response.InvalidPacket
+import com.cm.bluetooth.data.response.ParsedPacket
 import com.cm.naviconnector.feature.AppEffect
 import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
@@ -28,6 +30,7 @@ import com.cm.naviconnector.feature.audio.AudioRepository
 import com.cm.naviconnector.feature.control.BottomButtonType
 import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.FeatureState
+import com.cm.naviconnector.feature.control.PlaylistItem
 import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.feature.control.toControlTargetOrNull
 import com.cm.naviconnector.feature.upload.UploadState
@@ -82,6 +85,9 @@ class MainViewModel @Inject constructor(
 
     private val _scannedDevices = MutableStateFlow(emptyList<BluetoothDevice>())
     val scannedDevices: StateFlow<List<BluetoothDevice>> = _scannedDevices
+
+    private val _playlist = MutableStateFlow<List<PlaylistItem>>(emptyList())
+    val playlist: StateFlow<List<PlaylistItem>> = _playlist
 
     val audioPaging: Flow<PagingData<AudioFile>> =
         audioRepository
@@ -248,6 +254,10 @@ class MainViewModel @Inject constructor(
                 }
             )
 
+            if (isSuccess) {
+                getDeviceAudioList()
+            }
+
             withContext(NonCancellable) {
                 _uiState.update { it.copy(uploadState = UploadState.Idle) }
 
@@ -383,13 +393,74 @@ class MainViewModel @Inject constructor(
                 .catch { e -> Timber.e(e, "received failed") }
                 .collect { packet ->
                     Timber.d("received packet: $packet")
+                    when (packet) {
+                        is ParsedPacket.AudioList -> {
+                            val items =
+                                packet.fileNames.map { name -> PlaylistItem(fileName = name) }
+                            _playlist.value = items
+                        }
 
+                        is ParsedPacket.PlayAudioResult -> {
+                            val isSuccess =
+                                packet.resultCode == ParsedPacket.PlayAudioResult.ResultCode.SUCCESS
+                            _uiState.update {
+                                it.copy(playerState = it.playerState.copy(isPlaying = isSuccess))
+                            }
+
+                            val message = if (isSuccess) {
+                                "오디오 재생을 시작했습니다"
+                            } else when (packet.resultCode) {
+                                ParsedPacket.PlayAudioResult.ResultCode.SD_CARD_NOT_FOUND -> "SD 카드가 없습니다"
+                                ParsedPacket.PlayAudioResult.ResultCode.PLAYBACK_FAILED -> "재생에 실패했습니다"
+                                else -> "오디오 재생에 실패했습니다"
+                            }
+                            _effects.trySend(AppEffect.ShowToast(message))
+                        }
+
+                        is ParsedPacket.LowBattery -> {
+                            _effects.trySend(AppEffect.ShowToast("배터리 잔량이 ${packet.battery}% 남았습니다"))
+                            getDeviceStatusInfo()
+                        }
+
+                        is ParsedPacket.StatusInfo -> {
+                            updateFeaturesFromStatusInfo(packet)
+                        }
+
+                        is ParsedPacket.Ack -> {
+                            Timber.d("ACK for cmd: ${packet.command}")
+                        }
+
+                        is InvalidPacket -> {
+                            Timber.e("Invalid packet received: $packet")
+                        }
+
+                        else -> Timber.w("Unknown packet: $packet")
+                    }
                 }
         }
     }
 
     private fun resetUiState() {
         _uiState.value = AppUiState()
+    }
+
+    private fun updateFeaturesFromStatusInfo(status: ParsedPacket.StatusInfo) {
+        _uiState.update {
+            val updated = it.features.toMutableMap()
+            updated[Feature.FILM] =
+                FeatureState(enabled = status.filmStatus > 0, level = status.filmStatus)
+            updated[Feature.FAN] =
+                FeatureState(enabled = status.fanStatus > 0, level = status.fanStatus)
+            updated[Feature.HEATER] =
+                FeatureState(enabled = status.heaterStatus > 0, level = status.heaterStatus)
+            updated[Feature.AUDIO] =
+                FeatureState(enabled = status.isAudioPlaying, level = status.volume)
+
+            it.copy(
+                features = updated,
+                playerState = it.playerState.copy(isPlaying = status.isAudioPlaying)
+            )
+        }
     }
 
     private fun updateFeatureState() { // TODO: 구현 필요

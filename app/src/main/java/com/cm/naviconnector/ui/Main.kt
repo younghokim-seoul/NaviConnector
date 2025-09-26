@@ -59,6 +59,7 @@ fun MainRoute(vm: MainViewModel = hiltViewModel()) {
     var showUploadDialog by rememberSaveable { mutableStateOf(false) }
 
     val uiState = vm.uiState.collectAsStateWithLifecycle().value
+    val playlist = vm.playlist.collectAsStateWithLifecycle().value
 
     HandleDialogs(
         vm = vm,
@@ -84,12 +85,13 @@ fun MainRoute(vm: MainViewModel = hiltViewModel()) {
 
     MainScreen(
         uiState = uiState,
-        onEvent = vm::onEvent
+        onEvent = vm::onEvent,
+        playlist = playlist
     )
 }
 
 @Composable
-private fun HandleDialogs(
+private fun HandleDialogs( // TODO: vm 분리
     vm: MainViewModel,
     showDeviceDialog: Boolean,
     showAudioDialog: Boolean,
@@ -124,6 +126,7 @@ private fun HandleDialogs(
 fun MainScreen(
     uiState: AppUiState,
     onEvent: (AppEvent) -> Unit,
+    playlist: List<PlaylistItem>,
 ) {
     val activeColor = Navy
     val inactiveColor = LightGrayishBlue
@@ -221,14 +224,7 @@ fun MainScreen(
 
             PlaylistPanel(
                 modifier = Modifier.weight(1f),
-                playlist = listOf(
-                    PlaylistItem("NABI.mp3"),
-                    PlaylistItem("Running in the 90s.mp3"),
-                    PlaylistItem("Deja Vu.mp3"),
-                    PlaylistItem("Gas Gas Gas.mp3"),
-                    PlaylistItem("Night of Fire.mp3"),
-                    PlaylistItem("The Top.mp3"),
-                ),
+                playlist = playlist,
                 selectedFileName = uiState.selectedFileName,
                 onItemClick = { onEvent(AppEvent.PlaylistItemClicked(it)) }
             )
