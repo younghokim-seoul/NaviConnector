@@ -21,6 +21,7 @@ import com.cm.bluetooth.data.reqeust.UploadDoingRequest
 import com.cm.bluetooth.data.reqeust.UploadEndRequest
 import com.cm.bluetooth.data.reqeust.UploadStartRequest
 import com.cm.bluetooth.data.response.InvalidPacket
+import com.cm.bluetooth.data.response.NabiPacket
 import com.cm.bluetooth.data.response.ParsedPacket
 import com.cm.naviconnector.feature.AppEffect
 import com.cm.naviconnector.feature.AppEvent
@@ -47,12 +48,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -380,78 +381,82 @@ class MainViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeBluetoothPackets() {
         viewModelScope.launch {
-            uiState
-                .map { it.isConnected }
-                .distinctUntilChanged()
-                .flatMapLatest { connected ->
-                    if (connected) {
-                        bluetoothConnection?.receivePacket() ?: emptyFlow()
-                    } else {
-                        emptyFlow()
-                    }
-                }
-                .catch { e -> Timber.e(e, "received failed") }
+            combine(
+                bluetoothClient.collectConnectionState()
+                    .map { it.state == BluetoothAdapter.STATE_CONNECTED }
+                    .distinctUntilChanged(),
+                uiState
+                    .map { it.isConnected }
+                    .distinctUntilChanged()
+            ) { btConnected, uiConnected ->
+                btConnected && uiConnected
+            }.flatMapLatest { shouldCollect ->
+                if (!shouldCollect) return@flatMapLatest emptyFlow<ParsedPacket>()
+
+                val conn = bluetoothConnection
+                conn?.receivePacket() ?: emptyFlow()
+            }.catch { e -> Timber.e(e, "received failed") }
                 .collect { packet ->
                     Timber.d("received packet: $packet")
-                    when (packet) {
-                        is ParsedPacket.AudioList -> {
-                            val items =
-                                packet.fileNames.map { name -> PlaylistItem(fileName = name) }
-                            _playlist.value = items
-                        }
-
-                        is ParsedPacket.PlayAudioResult -> {
-                            val isSuccess =
-                                packet.resultCode == ParsedPacket.PlayAudioResult.ResultCode.SUCCESS
-                            _uiState.update {
-                                it.copy(playerState = it.playerState.copy(isPlaying = isSuccess))
-                            }
-
-                            val message = if (isSuccess) {
-                                "오디오 재생을 시작했습니다"
-                            } else when (packet.resultCode) {
-                                ParsedPacket.PlayAudioResult.ResultCode.SD_CARD_NOT_FOUND -> "SD 카드가 없습니다"
-                                ParsedPacket.PlayAudioResult.ResultCode.PLAYBACK_FAILED -> "재생에 실패했습니다"
-                                else -> "오디오 재생에 실패했습니다"
-                            }
-                            _effects.trySend(AppEffect.ShowToast(message))
-                        }
-
-                        is ParsedPacket.LowBattery -> {
-                            val battery = packet.battery
-                            when {
-                                battery !in 0..100 -> {
-                                    Timber.w("Invalid battery level: $battery")
-                                    return@collect
-                                }
-
-                                battery < 10 -> {
-                                    _effects.trySend(AppEffect.ShowToast("배터리 잔량이 ${battery}% 남았습니다"))
-                                    getDeviceStatusInfo()
-                                }
-                            }
-                        }
-
-                        is ParsedPacket.StatusInfo -> {
-                            updateFeaturesFromStatusInfo(packet)
-                        }
-
-                        is ParsedPacket.Ack -> {
-                            Timber.d("ACK for cmd: ${packet.command}")
-                        }
-
-                        is InvalidPacket -> {
-                            Timber.e("Invalid packet received: $packet")
-                        }
-
-                        else -> Timber.w("Unknown packet: $packet")
-                    }
+                    handlePacket(packet)
                 }
         }
     }
 
-    private fun resetUiState() {
-        _uiState.value = AppUiState()
+    private fun handlePacket(packet: NabiPacket) {
+        when (packet) {
+            is ParsedPacket.AudioList -> {
+                val items =
+                    packet.fileNames.map { name -> PlaylistItem(fileName = name) }
+                _playlist.value = items
+            }
+
+            is ParsedPacket.PlayAudioResult -> {
+                val isSuccess =
+                    packet.resultCode == ParsedPacket.PlayAudioResult.ResultCode.SUCCESS
+                _uiState.update {
+                    it.copy(playerState = it.playerState.copy(isPlaying = isSuccess))
+                }
+
+                val message = if (isSuccess) {
+                    "오디오 재생을 시작했습니다"
+                } else when (packet.resultCode) {
+                    ParsedPacket.PlayAudioResult.ResultCode.SD_CARD_NOT_FOUND -> "SD 카드가 없습니다"
+                    ParsedPacket.PlayAudioResult.ResultCode.PLAYBACK_FAILED -> "재생에 실패했습니다"
+                    else -> "오디오 재생에 실패했습니다"
+                }
+                _effects.trySend(AppEffect.ShowToast(message))
+            }
+
+            is ParsedPacket.LowBattery -> {
+                val battery = packet.battery
+                when {
+                    battery !in 0..100 -> {
+                        Timber.w("Invalid battery level: $battery")
+                        return
+                    }
+
+                    battery < 10 -> {
+                        _effects.trySend(AppEffect.ShowToast("배터리 잔량이 ${battery}% 남았습니다"))
+                        getDeviceStatusInfo()
+                    }
+                }
+            }
+
+            is ParsedPacket.StatusInfo -> {
+                updateFeaturesFromStatusInfo(packet)
+            }
+
+            is ParsedPacket.Ack -> {
+                Timber.d("ACK for cmd: ${packet.command}")
+            }
+
+            is InvalidPacket -> {
+                Timber.e("Invalid packet received: $packet")
+            }
+
+            else -> Timber.w("Unknown packet: $packet")
+        }
     }
 
     private fun updateFeaturesFromStatusInfo(status: ParsedPacket.StatusInfo) {
@@ -471,6 +476,10 @@ class MainViewModel @Inject constructor(
                 playerState = it.playerState.copy(isPlaying = status.isAudioPlaying)
             )
         }
+    }
+
+    private fun resetUiState() {
+        _uiState.value = AppUiState()
     }
 
     private fun updateFeatureState() { // TODO: 구현 필요
