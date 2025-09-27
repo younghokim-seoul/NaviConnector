@@ -71,6 +71,7 @@ class MainViewModel @Inject constructor(
 
     companion object {
         private const val CONNECT_TIMEOUT_MS = 5000L
+        private const val MAX_FRAME_DATA = 2000
     }
 
     private val _uiState = MutableStateFlow(AppUiState())
@@ -317,8 +318,7 @@ class MainViewModel @Inject constructor(
         val audioBytes = contentResolver.openInputStream(file.uri)?.use { it.readBytes() }
             ?: return@withContext false
 
-        val chunkSize = 2048
-        val chunks = audioBytes.asList().chunked(chunkSize)
+        val chunks = audioBytes.asList().chunked(MAX_FRAME_DATA)
         val totalFrames = chunks.size
 
         if (!sendPacket(UploadStartRequest(file.name, totalFrames))) return@withContext false
