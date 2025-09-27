@@ -1,5 +1,5 @@
 [versions]
-targetSdk = "35"
+targetSdk = "36"
 jvmBytecode = "17"
 agp = "8.9.2"
 kotlin = "2.1.10"

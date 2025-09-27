@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -136,13 +137,15 @@ fun MainScreen(
     val inactiveColor = LightGrayishBlue
 
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .safeDrawingPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Spacer(modifier = Modifier.height(24.dp))
         TopBar(isLowBattery = uiState.isLowBattery)
-        Spacer(modifier = Modifier.height(36.dp))
+        Spacer(modifier = Modifier.height(30.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             TopButtonType.entries.forEach { buttonType ->
