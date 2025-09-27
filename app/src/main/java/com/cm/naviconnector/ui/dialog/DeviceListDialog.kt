@@ -35,10 +35,11 @@ import androidx.compose.ui.window.DialogProperties
 @Composable
 fun DeviceListDialog(
     devices: List<BluetoothDevice>,
-    onConnectClick: (BluetoothDevice) -> Unit
+    onConnectClick: (BluetoothDevice) -> Unit,
+    onDismissRequest: () -> Unit
 ) {
     Dialog(
-        onDismissRequest = { },
+        onDismissRequest = onDismissRequest,
         properties = DialogProperties(
             dismissOnBackPress = true,
             dismissOnClickOutside = true

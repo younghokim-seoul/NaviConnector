@@ -91,8 +91,8 @@ fun MainRoute(vm: MainViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun HandleDialogs( // TODO: vm 분리
-    vm: MainViewModel,
+private fun HandleDialogs(
+    vm: MainViewModel, // TODO: vm 분리
     showDeviceDialog: Boolean,
     showAudioDialog: Boolean,
     showUploadDialog: Boolean
@@ -101,7 +101,8 @@ private fun HandleDialogs( // TODO: vm 분리
         val devices by vm.scannedDevices.collectAsStateWithLifecycle()
         DeviceListDialog(
             devices = devices,
-            onConnectClick = { vm.onEvent(AppEvent.DeviceConnectClicked(it)) }
+            onConnectClick = { vm.onEvent(AppEvent.DeviceConnectClicked(it)) },
+            onDismissRequest = { vm.onEvent(AppEvent.DeviceDialogDismissed) }
         )
     }
 
@@ -110,6 +111,7 @@ private fun HandleDialogs( // TODO: vm 분리
         AudioListDialog(
             audioFiles = audioFiles,
             onUploadClick = { vm.onEvent(AppEvent.AudioUploadClicked(it)) },
+            onDismissRequest = { vm.onEvent(AppEvent.AudioDialogDismissed) }
         )
     }
 
