@@ -9,7 +9,7 @@ import com.cm.naviconnector.feature.control.TopButtonType
 
 sealed interface AppEvent {
     data class TopButtonClicked(val type: TopButtonType) : AppEvent
-    data class FeatureSelected(val feature: Feature) : AppEvent
+    data class FeatureToggled(val feature: Feature) : AppEvent
     data class DialChanged(val level: Int) : AppEvent
     data class DeviceConnectClicked(val device: BluetoothDevice) : AppEvent
     data class BottomButtonClicked(val type: BottomButtonType) : AppEvent

@@ -111,25 +111,31 @@ class MainViewModel @Inject constructor(
                 }
             }
 
-            is AppEvent.FeatureSelected -> {
-                _uiState.update { it.copy(currentFeature = event.feature) }
+            is AppEvent.FeatureToggled -> {
+                viewModelScope.launch {
+                    if (!toggleFeature(event.feature)) {
+                        _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
+                    }
+                }
             }
 
             is AppEvent.DialChanged -> {
                 val currentFeature = _uiState.value.currentFeature ?: return
+                if (_uiState.value.features[currentFeature]?.enabled != true) return
+
                 val newLevel = event.level
 
                 viewModelScope.launch {
                     val isSuccess = sendControlPacket(currentFeature, newLevel)
                     if (isSuccess) {
-                        _uiState.update { currentState -> // TODO: feature 업데이트 하는 로직을 한 곳으로
-                            val newFeatures = currentState.features.toMutableMap()
+                        _uiState.update { // TODO: feature 업데이트 하는 로직을 한 곳으로
+                            val newFeatures = it.features.toMutableMap()
                             val currentFeatureState = newFeatures[currentFeature]
                             if (currentFeatureState != null && currentFeatureState.enabled) {
                                 newFeatures[currentFeature] =
                                     currentFeatureState.copy(level = newLevel)
                             }
-                            currentState.copy(features = newFeatures)
+                            it.copy(features = newFeatures)
                         }
                     } else {
                         _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
@@ -200,10 +206,10 @@ class MainViewModel @Inject constructor(
 
     private fun onPowerButtonClick() {
         val isPowerOn = _uiState.value.isPowerOn
-        setAllFeaturesEnabled(!isPowerOn)
+        toggleAllFeatures(!isPowerOn)
     }
 
-    private fun setAllFeaturesEnabled(enabled: Boolean) {
+    private fun toggleAllFeatures(enabled: Boolean) {
         val level = if (enabled) 1 else 0
 
         viewModelScope.launch {
@@ -222,6 +228,28 @@ class MainViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    private suspend fun toggleFeature(feature: Feature): Boolean = withContext(Dispatchers.IO) {
+        _uiState.update { it.copy(currentFeature = feature) }
+
+        val currentFeatureState = _uiState.value.features[feature] ?: return@withContext false
+        val shouldTurnOn = !currentFeatureState.enabled
+        val levelToSend = if (shouldTurnOn) 1 else 0
+
+        return@withContext if (!sendControlPacket(feature, levelToSend)) {
+            false
+        } else {
+            _uiState.update {
+                it.copy(
+                    features = it.features + (feature to currentFeatureState.copy(
+                        enabled = shouldTurnOn,
+                        level = levelToSend
+                    ))
+                )
+            }
+            true
         }
     }
 

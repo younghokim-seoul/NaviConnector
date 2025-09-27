@@ -177,7 +177,7 @@ fun MainScreen(
                 value = level,
                 onValueChangeFinished = { onEvent(AppEvent.DialChanged(it)) },
                 accentColor = accentColor,
-                enabled = uiState.currentFeature != null && uiState.isPowerOn
+                enabled = uiState.currentFeature != null && uiState.features[uiState.currentFeature]?.enabled == true
             )
             Image(painter = painterResource(id = R.drawable.dog), contentDescription = "Dog")
         }
@@ -187,13 +187,13 @@ fun MainScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             Feature.entries.forEach { feature ->
                 val featureState = uiState.features[feature]
-                val tint = if (featureState?.isActive == true) activeColor else inactiveColor
+                val enabled = featureState?.enabled == true
+                val tint = if (enabled) activeColor else inactiveColor
 
                 CircleButton(
                     painter = painterResource(id = feature.icon),
-                    onClick = { onEvent(AppEvent.FeatureSelected(feature)) },
-                    tint = tint,
-                    enabled = uiState.isPowerOn
+                    onClick = { onEvent(AppEvent.FeatureToggled(feature)) },
+                    tint = tint
                 )
             }
         }
