@@ -474,16 +474,16 @@ class MainViewModel @Inject constructor(
 
             is ParsedPacket.LowBattery -> {
                 val battery = packet.battery
-                when {
-                    battery !in 0..100 -> {
-                        Timber.w("Invalid battery level: $battery")
-                        return
-                    }
+                if (battery !in 0..100) {
+                    Timber.w("Invalid battery level: $battery")
+                    return
+                }
 
-                    battery < 10 -> {
-                        _effects.trySend(AppEffect.ShowToast("배터리 잔량이 ${battery}% 남았습니다"))
-                        getDeviceStatusInfo()
-                    }
+                val isLow = battery <= 10
+                _uiState.update { it.copy(isLowBattery = isLow) }
+
+                if (isLow) {
+                    _effects.trySend(AppEffect.ShowToast("배터리 잔량이 ${battery}% 남았습니다"))
                 }
             }
 
@@ -524,8 +524,5 @@ class MainViewModel @Inject constructor(
 
     private fun resetUiState() {
         _uiState.value = AppUiState()
-    }
-
-    private fun updateFeatureState() { // TODO: 구현 필요
     }
 }

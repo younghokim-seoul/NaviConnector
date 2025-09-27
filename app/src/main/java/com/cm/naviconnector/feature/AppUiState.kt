@@ -10,6 +10,7 @@ data class AppUiState(
     val currentFeature: Feature? = null,
     val features: Map<Feature, FeatureState> = MainFeature.allFeatures.associateWith { FeatureState() },
     val isConnected: Boolean = false,
+    val isLowBattery: Boolean = false,
     val uploadState: UploadState = UploadState.Idle,
     val selectedFileName: String? = null,
     val playerState: PlayerState = PlayerState()

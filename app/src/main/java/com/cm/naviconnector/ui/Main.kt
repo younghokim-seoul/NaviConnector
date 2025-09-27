@@ -141,7 +141,7 @@ fun MainScreen(
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Spacer(modifier = Modifier.height(24.dp))
-        TopBar()
+        TopBar(isLowBattery = uiState.isLowBattery)
         Spacer(modifier = Modifier.height(36.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {

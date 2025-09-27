@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -42,7 +43,7 @@ import com.cm.naviconnector.ui.theme.LightBlueish
 import com.cm.naviconnector.ui.theme.LightPurple
 
 @Composable
-fun TopBar() {
+fun TopBar(isLowBattery: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -53,6 +54,31 @@ fun TopBar() {
         Image(
             painter = painterResource(id = R.drawable.nabi_jjong),
             contentDescription = "NABI&JJONG Logo"
+        )
+        BatteryIndicator(isLow = isLowBattery)
+    }
+}
+
+@Composable
+fun BatteryIndicator(
+    isLow: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(8.dp)
+    val imageRes = if (isLow) R.drawable.battery_disable else R.drawable.battery_enable
+
+    Box(
+        modifier = modifier
+            .width(60.dp)
+            .height(40.dp)
+            .shadow(elevation = 6.dp, shape = shape)
+            .background(Color.White, shape)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(id = imageRes),
+            contentDescription = "Battery Status"
         )
     }
 }
