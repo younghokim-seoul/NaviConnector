@@ -1,5 +1,6 @@
 package com.cm.naviconnector.ui.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -209,5 +211,36 @@ fun AppBackground(content: @Composable () -> Unit) {
             )
     ) {
         content()
+    }
+}
+
+@Composable
+fun Label(
+    modifier: Modifier = Modifier,
+    text: String,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(12.dp)
+    Surface(
+        modifier = modifier
+            .padding(horizontal = 2.dp)
+            .clickable(onClick = onClick)
+            .shadow(
+                elevation = 6.dp,
+                shape = shape,
+                clip = false
+            ),
+        shape = shape,
+        color = Color.White,
+        border = BorderStroke(1.dp, tint)
+    ) {
+        Text(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            text = text,
+            color = tint,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium
+        )
     }
 }

@@ -34,14 +34,16 @@ import com.cm.naviconnector.feature.AppEffect
 import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
 import com.cm.naviconnector.feature.control.BottomButtonType
-import com.cm.naviconnector.feature.control.Feature
+import com.cm.naviconnector.feature.control.MainFeature
 import com.cm.naviconnector.feature.control.PlaylistItem
+import com.cm.naviconnector.feature.control.SubFeature
 import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.feature.upload.UploadState
 import com.cm.naviconnector.ui.component.CircleButton
 import com.cm.naviconnector.ui.component.CircularSeekbar
 import com.cm.naviconnector.ui.component.PlaylistPanel
 import com.cm.naviconnector.ui.component.RectangleButton
+import com.cm.naviconnector.ui.component.Label
 import com.cm.naviconnector.ui.component.TopBar
 import com.cm.naviconnector.ui.dialog.AudioListDialog
 import com.cm.naviconnector.ui.dialog.DeviceListDialog
@@ -184,21 +186,14 @@ fun MainScreen(
             Image(painter = painterResource(id = R.drawable.dog), contentDescription = "Dog")
         }
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            Feature.entries.forEach { feature ->
-                val featureState = uiState.features[feature]
-                val enabled = featureState?.enabled == true
-                val tint = if (enabled) activeColor else inactiveColor
-
-                CircleButton(
-                    painter = painterResource(id = feature.icon),
-                    onClick = { onEvent(AppEvent.FeatureToggled(feature)) },
-                    tint = tint
-                )
-            }
-        }
+        MainFeatures(
+            uiState = uiState,
+            onEvent = onEvent,
+            activeColor = activeColor,
+            inactiveColor = inactiveColor
+        )
 
         Spacer(modifier = Modifier.height(50.dp))
 
@@ -233,5 +228,61 @@ fun MainScreen(
         }
 
         Spacer(modifier = Modifier.height(30.dp))
+    }
+}
+
+@Composable
+fun MainFeatures(
+    uiState: AppUiState,
+    onEvent: (AppEvent) -> Unit,
+    activeColor: Color,
+    inactiveColor: Color
+) {
+    Row( // TODO: Row 중첩 필요?
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.Top
+    ) {
+        MainFeature.mainFeatures.forEach { mainFeature ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.height(30.dp)
+                ) {
+                    val isSelected = when (val current = uiState.currentFeature) {
+                        is MainFeature -> current == mainFeature
+                        is SubFeature -> mainFeature.subFeatures.contains(current)
+                        else -> false
+                    }
+
+                    if (isSelected) {
+                        mainFeature.subFeatures.forEach { subFeature ->
+                            val subFeatureState = uiState.features[subFeature]
+                            val subFeatureEnabled = subFeatureState?.enabled == true
+
+                            Label(
+                                text = subFeature.id,
+                                tint = if (subFeatureEnabled) activeColor else inactiveColor,
+                                onClick = { onEvent(AppEvent.FeatureToggled(subFeature)) }
+                            )
+                        }
+                    }
+                }
+
+                val featureState = uiState.features[mainFeature]
+                val enabled = featureState?.enabled == true
+                val tint = if (enabled) activeColor else inactiveColor
+
+                CircleButton(
+                    painter = painterResource(id = mainFeature.icon),
+                    onClick = { onEvent(AppEvent.FeatureToggled(mainFeature)) },
+                    tint = tint,
+                    enabled = uiState.isConnected
+                )
+            }
+        }
     }
 }

@@ -31,9 +31,9 @@ import com.cm.naviconnector.feature.audio.AudioRepository
 import com.cm.naviconnector.feature.control.BottomButtonType
 import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.FeatureState
+import com.cm.naviconnector.feature.control.MainFeature
 import com.cm.naviconnector.feature.control.PlaylistItem
 import com.cm.naviconnector.feature.control.TopButtonType
-import com.cm.naviconnector.feature.control.toControlTargetOrNull
 import com.cm.naviconnector.feature.upload.UploadState
 import com.cm.naviconnector.util.sendAll
 import com.cm.naviconnector.util.trySendAll
@@ -219,7 +219,7 @@ class MainViewModel @Inject constructor(
         toggleAllFeatures(!isPowerOn)
         if (!isPowerOn) { // TODO: 연결 성공, power on 시점의 초기 feature 선택 로직 분리 필요
             _uiState.update {
-                it.copy(currentFeature = Feature.FAN)
+                it.copy(currentFeature = MainFeature.Fan)
             }
         }
     }
@@ -229,9 +229,9 @@ class MainViewModel @Inject constructor(
 
         viewModelScope.launch {
             val partialUpdates = buildMap {
-                for (f in Feature.entries) {
-                    if (sendControlPacket(f, level)) {
-                        put(f, FeatureState(enabled = enabled, level = level))
+                for (feature in MainFeature.allFeatures) {
+                    if (sendControlPacket(feature, level)) {
+                        put(feature, FeatureState(enabled = enabled, level = level))
                     }
                 }
             }
@@ -249,23 +249,28 @@ class MainViewModel @Inject constructor(
     private suspend fun toggleFeature(feature: Feature): Boolean = withContext(Dispatchers.IO) {
         _uiState.update { it.copy(currentFeature = feature) }
 
-        val currentFeatureState = _uiState.value.features[feature] ?: return@withContext false
-        val shouldTurnOn = !currentFeatureState.enabled
+        val currentState = _uiState.value.features[feature] ?: return@withContext false
+        val shouldTurnOn = !currentState.enabled
         val levelToSend = if (shouldTurnOn) 1 else 0
 
-        return@withContext if (!sendControlPacket(feature, levelToSend)) {
-            false
-        } else {
-            _uiState.update {
-                it.copy(
-                    features = it.features + (feature to currentFeatureState.copy(
-                        enabled = shouldTurnOn,
-                        level = levelToSend
-                    ))
-                )
-            }
-            true
+        if (!sendControlPacket(feature, levelToSend)) return@withContext false
+
+        _uiState.update {
+            val mainUpdate =
+                feature to currentState.copy(enabled = shouldTurnOn, level = levelToSend)
+            val subUpdates =
+                if (feature is MainFeature && !shouldTurnOn) {
+                    feature.subFeatures.associateWith { sub ->
+                        (it.features[sub] ?: FeatureState())
+                            .copy(enabled = false, level = 0)
+                    }
+                } else {
+                    emptyMap()
+                }
+
+            it.copy(features = it.features + mainUpdate + subUpdates)
         }
+        true
     }
 
     private fun showDeviceDialog() {
@@ -359,11 +364,11 @@ class MainViewModel @Inject constructor(
 
     private suspend fun sendControlPacket(feature: Feature, level: Int): Boolean =
         withContext(Dispatchers.IO) {
-            if (feature == Feature.AUDIO) {
+            if (feature == MainFeature.Audio) {
                 return@withContext sendPacket(SetVolumeRequest(level))
             }
 
-            val controlTarget = feature.toControlTargetOrNull()
+            val controlTarget = feature.controlTarget
             return@withContext if (controlTarget != null) {
                 val packet = ControlPacket(target = controlTarget, value = level)
                 sendPacket(packet)
@@ -501,13 +506,13 @@ class MainViewModel @Inject constructor(
     private fun updateFeaturesFromStatusInfo(status: ParsedPacket.StatusInfo) {
         _uiState.update {
             val updated = it.features.toMutableMap()
-            updated[Feature.FILM] =
+            updated[MainFeature.Film] =
                 FeatureState(enabled = status.filmStatus > 0, level = status.filmStatus)
-            updated[Feature.FAN] =
+            updated[MainFeature.Fan] =
                 FeatureState(enabled = status.fanStatus > 0, level = status.fanStatus)
-            updated[Feature.HEATER] =
+            updated[MainFeature.Heater] =
                 FeatureState(enabled = status.heaterStatus > 0, level = status.heaterStatus)
-            updated[Feature.AUDIO] =
+            updated[MainFeature.Audio] =
                 FeatureState(enabled = status.isAudioPlaying, level = status.volume)
 
             it.copy(
