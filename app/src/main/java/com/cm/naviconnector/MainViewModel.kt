@@ -170,11 +170,11 @@ class MainViewModel @Inject constructor(
                 }
             }
 
-            is AppEvent.DismissAudioDialog -> {
+            is AppEvent.AudioDialogDismissed -> {
                 _effects.trySend(AppEffect.SetAudioDialogVisible(false))
             }
 
-            is AppEvent.DismissDeviceDialog -> {
+            is AppEvent.DeviceDialogDismissed -> {
                 _effects.trySend(AppEffect.SetDeviceDialogVisible(false))
 
             }
