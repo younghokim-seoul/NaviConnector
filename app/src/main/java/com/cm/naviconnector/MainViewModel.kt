@@ -122,7 +122,7 @@ class MainViewModel @Inject constructor(
                 viewModelScope.launch {
                     val isSuccess = sendControlPacket(currentFeature, newLevel)
                     if (isSuccess) {
-                        _uiState.update { currentState ->
+                        _uiState.update { currentState -> // TODO: feature 업데이트 하는 로직을 한 곳으로
                             val newFeatures = currentState.features.toMutableMap()
                             val currentFeatureState = newFeatures[currentFeature]
                             if (currentFeatureState != null && currentFeatureState.enabled) {
@@ -207,7 +207,7 @@ class MainViewModel @Inject constructor(
         val level = if (enabled) 1 else 0
 
         viewModelScope.launch {
-            val partialUpdates = buildMap<Feature, FeatureState> {
+            val partialUpdates = buildMap {
                 for (f in Feature.entries) {
                     if (sendControlPacket(f, level)) {
                         put(f, FeatureState(enabled = enabled, level = level))
@@ -324,13 +324,14 @@ class MainViewModel @Inject constructor(
             val controlTarget = feature.toControlTargetOrNull()
             return@withContext if (controlTarget != null) {
                 val packet = ControlPacket(target = controlTarget, value = level)
-                bluetoothConnection?.sendPacket(packet.toByteArray()) == true
+                sendPacket(packet)
             } else {
                 false
             }
         }
 
     private suspend fun sendPacket(packet: RequestPacket): Boolean = withContext(Dispatchers.IO) {
+        Timber.d("sendPacket: $packet")
         val isSuccess = bluetoothConnection?.sendPacket(packet.toByteArray()) == true
         if (!isSuccess) {
             Timber.e("sendPacket failed: $packet")
