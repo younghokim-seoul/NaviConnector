@@ -186,7 +186,7 @@ fun MainScreen(
             Image(painter = painterResource(id = R.drawable.dog), contentDescription = "Dog")
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(5.dp))
 
         MainFeatures(
             uiState = uiState,
