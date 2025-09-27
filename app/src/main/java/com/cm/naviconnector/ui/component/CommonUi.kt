@@ -62,6 +62,7 @@ fun CircleButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     tint: Color = Color.Unspecified,
+    backgroundColor: Color = Color.White,
     enabled: Boolean = true
 ) {
     val shape = CircleShape
@@ -74,7 +75,7 @@ fun CircleButton(
                 clip = false
             )
             .clip(shape)
-            .background(Color.White)
+            .background(backgroundColor)
             .combinedClickable(
                 onClick = onClick,
                 enabled = enabled

@@ -207,6 +207,11 @@ class MainViewModel @Inject constructor(
     private fun onPowerButtonClick() {
         val isPowerOn = _uiState.value.isPowerOn
         toggleAllFeatures(!isPowerOn)
+        if (!isPowerOn) { // TODO: 연결 성공, power on 시점의 초기 feature 선택 로직 분리 필요
+            _uiState.update {
+                it.copy(currentFeature = Feature.FAN)
+            }
+        }
     }
 
     private fun toggleAllFeatures(enabled: Boolean) {
