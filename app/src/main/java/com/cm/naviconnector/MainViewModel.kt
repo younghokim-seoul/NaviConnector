@@ -225,22 +225,20 @@ class MainViewModel @Inject constructor(
     }
 
     private fun toggleAllFeatures(enabled: Boolean) {
-        val level = if (enabled) 1 else 0
-
         viewModelScope.launch {
-            val partialUpdates = buildMap {
-                for (feature in MainFeature.allFeatures) {
-                    if (sendControlPacket(feature, level)) {
-                        put(feature, FeatureState(enabled = enabled, level = level))
+            if (enabled) {
+                for (feature in MainFeature.mainFeatures) {
+                    val currentState = _uiState.value.features[feature]
+                    if (currentState?.enabled == false) {
+                        toggleFeature(feature)
                     }
                 }
-            }
-
-            if (partialUpdates.isNotEmpty()) {
-                _uiState.update { state ->
-                    state.copy(
-                        features = state.features + partialUpdates
-                    )
+            } else {
+                for (feature in MainFeature.allFeatures) {
+                    val currentState = _uiState.value.features[feature]
+                    if (currentState?.enabled == true) {
+                        toggleFeature(feature)
+                    }
                 }
             }
         }
