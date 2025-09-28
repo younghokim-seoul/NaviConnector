@@ -11,8 +11,8 @@ import com.cm.naviconnector.ui.theme.Rose
 
 sealed class MainFeature(
     override val id: String,
-    override val controlTarget: ControlTarget?,
     override val color: Color,
+    val controlTarget: ControlTarget?,
     @DrawableRes
     val icon: Int,
     val subFeatures: List<SubFeature> = emptyList()
@@ -25,30 +25,30 @@ sealed class MainFeature(
 
     data object Heater : MainFeature(
         id = "heater",
-        controlTarget = ControlTarget.HEATER,
         color = Rose,
+        controlTarget = ControlTarget.HEATER,
         icon = R.drawable.heater
     )
 
     data object Audio : MainFeature(
         id = "audio",
-        controlTarget = null,
         color = Aqua,
+        controlTarget = null,
         icon = R.drawable.audio
     )
 
     data object Fan : MainFeature(
         id = "fan",
-        controlTarget = ControlTarget.FAN,
         color = Indigo,
+        controlTarget = ControlTarget.FAN,
         icon = R.drawable.fan
     )
 
     data object Film : MainFeature(
         id = "film",
-        controlTarget = ControlTarget.FILM,
         color = Goldenrod,
+        controlTarget = ControlTarget.FILM,
         icon = R.drawable.film,
-        subFeatures = listOf(SubFeature.FilmAndFan)
+        subFeatures = listOf(SubFeature.Random)
     )
 }

@@ -33,6 +33,7 @@ import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.FeatureState
 import com.cm.naviconnector.feature.control.MainFeature
 import com.cm.naviconnector.feature.control.PlaylistItem
+import com.cm.naviconnector.feature.control.SubFeature
 import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.feature.upload.UploadState
 import com.cm.naviconnector.util.sendAll
@@ -203,11 +204,6 @@ class MainViewModel @Inject constructor(
                     AppEffect.SetDeviceDialogVisible(false),
                     AppEffect.ShowToast("장치에 연결되었습니다")
                 )
-
-                val trainingModePacket = TrainingModeRequest(TrainingMode.RANDOM)
-                if (bluetoothConnection?.sendPacket(trainingModePacket.toByteArray()) != true) {
-                    Timber.e("send TrainingModeRequest failed")
-                }
             } else {
                 _effects.send(AppEffect.ShowToast("장치 연결에 실패했습니다"))
             }
@@ -364,17 +360,18 @@ class MainViewModel @Inject constructor(
 
     private suspend fun sendControlPacket(feature: Feature, level: Int): Boolean =
         withContext(Dispatchers.IO) {
-            if (feature == MainFeature.Audio) {
-                return@withContext sendPacket(SetVolumeRequest(level))
+            val packet = when (feature) {
+                is MainFeature -> when (feature) {
+                    MainFeature.Audio -> SetVolumeRequest(level)
+                    else -> feature.controlTarget?.let { ControlPacket(it, level) }
+                }
+
+                is SubFeature -> when (feature) {
+                    is SubFeature.Random -> TrainingModeRequest(TrainingMode.RANDOM)
+                }
             }
 
-            val controlTarget = feature.controlTarget
-            return@withContext if (controlTarget != null) {
-                val packet = ControlPacket(target = controlTarget, value = level)
-                sendPacket(packet)
-            } else {
-                false
-            }
+            return@withContext packet?.let { sendPacket(it) } ?: false
         }
 
     private suspend fun sendPacket(packet: RequestPacket): Boolean = withContext(Dispatchers.IO) {
