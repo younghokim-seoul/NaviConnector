@@ -367,7 +367,7 @@ class MainViewModel @Inject constructor(
                 }
 
                 is SubFeature -> when (feature) {
-                    is SubFeature.Random -> TrainingModeRequest(TrainingMode.RANDOM)
+                    is SubFeature.Random -> TrainingModeRequest(TrainingMode.RANDOM, level)
                 }
             }
 
