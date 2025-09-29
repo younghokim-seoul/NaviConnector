@@ -23,6 +23,7 @@ import com.cm.bluetooth.data.reqeust.UploadStartRequest
 import com.cm.bluetooth.data.response.InvalidPacket
 import com.cm.bluetooth.data.response.NabiPacket
 import com.cm.bluetooth.data.response.ParsedPacket
+import com.cm.naviconnector.data.DataStoreRepository
 import com.cm.naviconnector.feature.AppEffect
 import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
@@ -52,6 +53,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -70,6 +72,7 @@ import kotlin.coroutines.cancellation.CancellationException
 class MainViewModel @Inject constructor(
     private val bluetoothClient: BluetoothClient,
     private val contentResolver: ContentResolver,
+    private val dataStoreRepository: DataStoreRepository,
     audioRepository: AudioRepository
 ) : ViewModel() {
 
@@ -143,6 +146,7 @@ class MainViewModel @Inject constructor(
                             }
                             it.copy(features = newFeatures)
                         }
+                        dataStoreRepository.saveFeatureLevel(currentFeature, newLevel)
                     } else {
                         _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
                     }
@@ -245,11 +249,13 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun toggleFeature(feature: Feature): Boolean = withContext(Dispatchers.IO) {
-        _uiState.update { it.copy(currentFeature = feature) }
-
         val currentState = _uiState.value.features[feature] ?: return@withContext false
         val shouldTurnOn = !currentState.enabled
-        val levelToSend = if (shouldTurnOn) 1 else 0
+        val levelToSend = if (shouldTurnOn) {
+            dataStoreRepository.getFeatureLevel(feature).first() ?: 1
+        } else {
+            0
+        }
 
         if (!sendControlPacket(feature, levelToSend)) return@withContext false
 

@@ -1,6 +1,7 @@
 package com.cm.naviconnector.di
 
 import android.content.Context
+import com.cm.naviconnector.data.DataStoreRepository
 import com.cm.naviconnector.feature.audio.AudioRepository
 import dagger.Module
 import dagger.Provides
@@ -24,5 +25,11 @@ object AppModule {
     @Singleton
     fun provideContentResolver(@ApplicationContext context: Context): ContentResolver {
         return context.contentResolver
+    }
+
+    @Provides
+    @Singleton
+    fun provideDataStoreRepository(@ApplicationContext context: Context): DataStoreRepository {
+        return DataStoreRepository(context)
     }
 }

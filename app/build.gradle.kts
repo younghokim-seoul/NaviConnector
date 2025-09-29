@@ -76,6 +76,7 @@ dependencies {
     implementation(libs.timber)
     implementation(libs.circularseekbar)
     implementation(libs.ted.permission)
+    implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

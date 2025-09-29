@@ -24,28 +24,28 @@ sealed class MainFeature(
     }
 
     data object Heater : MainFeature(
-        id = "heater",
+        id = "Heater",
         color = Rose,
         controlTarget = ControlTarget.HEATER,
         icon = R.drawable.heater
     )
 
     data object Audio : MainFeature(
-        id = "audio",
+        id = "Audio",
         color = Aqua,
         controlTarget = null,
         icon = R.drawable.audio
     )
 
     data object Fan : MainFeature(
-        id = "fan",
+        id = "Fan",
         color = Indigo,
         controlTarget = ControlTarget.FAN,
         icon = R.drawable.fan
     )
 
     data object Film : MainFeature(
-        id = "film",
+        id = "Film",
         color = Goldenrod,
         controlTarget = ControlTarget.FILM,
         icon = R.drawable.film,
