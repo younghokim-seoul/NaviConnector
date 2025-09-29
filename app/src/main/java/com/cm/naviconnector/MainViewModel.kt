@@ -38,6 +38,8 @@ import com.cm.naviconnector.feature.control.SubFeature
 import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.feature.upload.UploadState
 import com.cm.naviconnector.util.commandByte
+import com.cm.naviconnector.util.scaleFrom
+import com.cm.naviconnector.util.scaleTo
 import com.cm.naviconnector.util.sendAll
 import com.cm.naviconnector.util.trySendAll
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -82,7 +84,7 @@ class MainViewModel @Inject constructor(
     companion object {
         private const val CONNECT_TIMEOUT_MS = 5000L
         private const val MAX_FRAME_DATA = 2000
-        private const val ACK_TIMEOUT_MS = 5000L
+        private const val ACK_TIMEOUT_MS = 10_000L
     }
 
     private val _uiState = MutableStateFlow(AppUiState())
@@ -399,14 +401,18 @@ class MainViewModel @Inject constructor(
             val packet = when (feature) {
                 is MainFeature -> when (feature) {
                     MainFeature.Audio -> SetVolumeRequest(level)
-                    else -> feature.controlTarget?.let { ControlPacket(it, level) }
+                    else -> feature.controlTarget?.let { ControlPacket(it, scaleTo(level)) }
                 }
 
                 is SubFeature -> when (feature) {
-                    is SubFeature.Random -> TrainingModeRequest(TrainingMode.RANDOM, level)
+                    is SubFeature.Random -> TrainingModeRequest(
+                        TrainingMode.RANDOM,
+                        scaleTo(level = level, outMax = 100)
+                    )
                 }
             }
 
+            Timber.d("sendControlPacket: feature: $feature, level: $level, packet: $packet")
             return@withContext packet?.let { sendRequestAndWaitForAck(it) } ?: false
         }
 
@@ -414,6 +420,8 @@ class MainViewModel @Inject constructor(
         packet: RequestPacket,
         timeout: Long = ACK_TIMEOUT_MS
     ): Boolean = withContext(Dispatchers.IO) {
+        Timber.d("sendRequestAndWaitForAck: packet: $packet")
+
         val command = packet.commandByte() ?: run {
             Timber.e("sendRequestAndWaitForAck: Unknown packet type: $packet")
             return@withContext false
@@ -570,10 +578,10 @@ class MainViewModel @Inject constructor(
     private fun updateFeaturesFromStatusInfo(status: ParsedPacket.StatusInfo) {
         _uiState.update {
             val updated = it.features.toMutableMap()
-            updated[MainFeature.Film] = FeatureState(level = status.filmStatus)
-            updated[MainFeature.Fan] = FeatureState(level = status.fanStatus)
-            updated[MainFeature.Heater] = FeatureState(level = status.heaterStatus)
+            updated[MainFeature.Heater] = FeatureState(level = scaleFrom(status.heaterStatus))
             updated[MainFeature.Audio] = FeatureState(level = status.volume)
+            updated[MainFeature.Fan] = FeatureState(level = scaleFrom(status.fanStatus))
+            updated[MainFeature.Film] = FeatureState(level = scaleFrom(status.filmStatus))
 
             it.copy(
                 features = updated,

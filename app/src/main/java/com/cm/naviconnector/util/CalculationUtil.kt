@@ -47,3 +47,29 @@ fun centeredProgressDiameter(inner: Dp, outer: Dp, stroke: Dp): Dp =
     (((inner.value + outer.value) / 2f) + stroke.value).dp
 
 fun Dp.toPx(density: Density): Float = with(density) { this@toPx.toPx() }
+
+fun scaleTo(
+    level: Int,
+    outMax: Int = 255,
+    domainMax: Int = 10,
+    clamp: Boolean = true
+): Int {
+    require(domainMax > 0) { "domainMax must be > 0" }
+    require(outMax >= 0) { "outMax must be >= 0" }
+
+    val x = if (clamp) level.coerceIn(0, domainMax) else level
+    return ((x / domainMax.toFloat()) * outMax).roundToInt()
+}
+
+fun scaleFrom(
+    value: Int,
+    inMax: Int = 255,
+    domainMax: Int = 10,
+    clamp: Boolean = true
+): Int {
+    require(inMax > 0) { "inMax must be > 0" }
+    require(domainMax >= 0) { "domainMax must be >= 0" }
+
+    val x = if (clamp) value.coerceIn(0, inMax) else value
+    return ((x / inMax.toFloat()) * domainMax).roundToInt()
+}
