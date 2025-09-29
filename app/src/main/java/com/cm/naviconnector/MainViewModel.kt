@@ -121,11 +121,7 @@ class MainViewModel @Inject constructor(
             }
 
             is AppEvent.FeatureToggled -> {
-                viewModelScope.launch {
-                    if (!toggleFeature(event.feature)) {
-                        _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
-                    }
-                }
+                onFeatureToggled(event.feature)
             }
 
             is AppEvent.DialChanged -> {
@@ -190,6 +186,23 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    private fun onFeatureToggled(feature: Feature) {
+        viewModelScope.launch {
+            val currentFeature = _uiState.value.currentFeature
+            if (currentFeature != feature) {
+                updateCurrentFeature(feature)
+            } else {
+                if (!toggleFeature(feature)) {
+                    _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
+                }
+            }
+        }
+    }
+
+    private fun updateCurrentFeature(feature: Feature) {
+        _uiState.update { it.copy(currentFeature = feature) }
+    }
+
     private fun connectDevice(device: BluetoothDevice) {
         viewModelScope.launch(Dispatchers.IO) {
             val connected = runCatching {
@@ -221,10 +234,8 @@ class MainViewModel @Inject constructor(
     private fun onPowerButtonClick() {
         val isPowerOn = _uiState.value.isPowerOn
         toggleAllFeatures(!isPowerOn)
-        if (!isPowerOn) { // TODO: 연결 성공, power on 시점의 초기 feature 선택 로직 분리 필요
-            _uiState.update {
-                it.copy(currentFeature = MainFeature.Fan)
-            }
+        if (!isPowerOn) {
+            updateCurrentFeature(MainFeature.Fan)
         }
     }
 
