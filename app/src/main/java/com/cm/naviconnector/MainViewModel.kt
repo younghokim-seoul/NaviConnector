@@ -279,7 +279,11 @@ class MainViewModel @Inject constructor(
         val currentState = _uiState.value.features[feature] ?: return@withContext false
         val shouldTurnOn = !currentState.enabled
         val levelToSend = if (shouldTurnOn) {
-            dataStoreRepository.getFeatureLevel(feature).first() ?: 1
+            if (feature == SubFeature.Random) { // TODO: 예외 상황에 대한 데이터 구조 잡기
+                50
+            } else {
+                dataStoreRepository.getFeatureLevel(feature).first() ?: 1
+            }
         } else {
             0
         }
@@ -416,7 +420,7 @@ class MainViewModel @Inject constructor(
             return@withContext packet?.let { sendRequestAndWaitForAck(it) } ?: false
         }
 
-    private suspend fun sendRequestAndWaitForAck(
+    private suspend fun sendRequestAndWaitForAck( // TODO: 뷰모델과 분리
         packet: RequestPacket,
         timeout: Long = ACK_TIMEOUT_MS
     ): Boolean = withContext(Dispatchers.IO) {
