@@ -37,9 +37,11 @@ import com.cm.naviconnector.feature.control.PlaylistItem
 import com.cm.naviconnector.feature.control.SubFeature
 import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.feature.upload.UploadState
+import com.cm.naviconnector.util.commandByte
 import com.cm.naviconnector.util.sendAll
 import com.cm.naviconnector.util.trySendAll
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
@@ -65,6 +67,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -79,6 +82,7 @@ class MainViewModel @Inject constructor(
     companion object {
         private const val CONNECT_TIMEOUT_MS = 5000L
         private const val MAX_FRAME_DATA = 2000
+        private const val ACK_TIMEOUT_MS = 5000L
     }
 
     private val _uiState = MutableStateFlow(AppUiState())
@@ -92,6 +96,8 @@ class MainViewModel @Inject constructor(
 
     private val _playlist = MutableStateFlow<List<PlaylistItem>>(emptyList())
     val playlist: StateFlow<List<PlaylistItem>> = _playlist
+
+    private val ackWaiters = ConcurrentHashMap<Byte, CompletableDeferred<ParsedPacket.Ack>>()
 
     val audioPaging: Flow<PagingData<AudioFile>> =
         audioRepository
@@ -346,16 +352,22 @@ class MainViewModel @Inject constructor(
         val chunks = audioBytes.asList().chunked(MAX_FRAME_DATA)
         val totalFrames = chunks.size
 
-        if (!sendPacket(UploadStartRequest(file.name, totalFrames))) return@withContext false
+        if (!sendRequestAndWaitForAck(UploadStartRequest(file.name, totalFrames))) {
+            Timber.e("UploadStartRequest failed to get ACK")
+            return@withContext false
+        }
 
         chunks.forEachIndexed { index, chunk ->
-            if (!sendPacket(
+            if (!sendRequestAndWaitForAck(
                     UploadDoingRequest(
                         frameNumber = index,
                         frameData = chunk.toByteArray()
                     )
                 )
-            ) return@withContext false
+            ) {
+                Timber.e("UploadDoingRequest for frame $index failed to get ACK")
+                return@withContext false
+            }
 
             val progress = ((index + 1) * 100) / totalFrames
             withContext(Dispatchers.Main) {
@@ -363,7 +375,7 @@ class MainViewModel @Inject constructor(
             }
         }
 
-        return@withContext sendPacket(UploadEndRequest(file.name))
+        return@withContext sendRequestAndWaitForAck(UploadEndRequest(file.name))
     }
 
     private fun setPlaying(isPlaying: Boolean) {
@@ -376,7 +388,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val audioPacket =
                 if (isPlaying) PlayAudioRequest(selectedFileName) else StopAudioRequest()
-            if (!sendPacket(audioPacket)) {
+            if (!sendRequestAndWaitForAck(audioPacket)) {
                 _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
             }
         }
@@ -395,23 +407,46 @@ class MainViewModel @Inject constructor(
                 }
             }
 
-            return@withContext packet?.let { sendPacket(it) } ?: false
+            return@withContext packet?.let { sendRequestAndWaitForAck(it) } ?: false
         }
 
-    private suspend fun sendPacket(packet: RequestPacket): Boolean = withContext(Dispatchers.IO) {
-        Timber.d("sendPacket: $packet")
-        val isSuccess = bluetoothConnection?.sendPacket(packet.toByteArray()) == true
-        if (!isSuccess) {
-            Timber.e("sendPacket failed: $packet")
+    private suspend fun sendRequestAndWaitForAck(
+        packet: RequestPacket,
+        timeout: Long = ACK_TIMEOUT_MS
+    ): Boolean = withContext(Dispatchers.IO) {
+        val command = packet.commandByte() ?: run {
+            Timber.e("sendRequestAndWaitForAck: Unknown packet type: $packet")
+            return@withContext false
         }
-        return@withContext isSuccess
+        val deferred = CompletableDeferred<ParsedPacket.Ack>()
+
+        if (ackWaiters.putIfAbsent(command, deferred) != null) {
+            Timber.w("sendRequestAndWaitForAck: Concurrent request for command $command. Failing.")
+            return@withContext false
+        }
+
+        try {
+            val sent = bluetoothConnection?.sendPacket(packet.toByteArray()) == true
+            if (!sent) {
+                Timber.e("sendRequestAndWaitForAck: sendPacket failed for command $command")
+                return@withContext false
+            }
+
+            withTimeout(timeout) {
+                val ack = deferred.await()
+                ack.command == command
+            }
+        } catch (e: TimeoutCancellationException) {
+            Timber.e(e, "sendRequestAndWaitForAck: timed out waiting for ACK for command $command")
+            false
+        } finally {
+            ackWaiters.remove(command, deferred)
+        }
     }
 
     private fun getDeviceStatusInfo() {
         viewModelScope.launch(Dispatchers.IO) {
-            val isSuccess =
-                bluetoothConnection?.sendPacket(StatusInfoRequest().toByteArray()) == true
-            if (!isSuccess) {
+            if (!sendRequestAndWaitForAck(StatusInfoRequest())) {
                 Timber.e("getDeviceStatusInfo: sendPacket failed")
             }
         }
@@ -419,9 +454,7 @@ class MainViewModel @Inject constructor(
 
     private fun getDeviceAudioList() {
         viewModelScope.launch(Dispatchers.IO) {
-            val isSuccess =
-                bluetoothConnection?.sendPacket(GetAudioListRequest(10).toByteArray()) == true // TODO: 페이징
-            if (!isSuccess) {
+            if (!sendRequestAndWaitForAck(GetAudioListRequest(10))) { // TODO: 페이징
                 Timber.e("getDeviceAudioList: sendPacket failed")
             }
         }
@@ -523,6 +556,7 @@ class MainViewModel @Inject constructor(
 
             is ParsedPacket.Ack -> {
                 Timber.d("ACK for cmd: ${packet.command}")
+                ackWaiters[packet.command]?.complete(packet)
             }
 
             is InvalidPacket -> {
