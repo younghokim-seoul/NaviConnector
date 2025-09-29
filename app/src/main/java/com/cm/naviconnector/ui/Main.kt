@@ -184,7 +184,7 @@ fun MainScreen(
                 value = level,
                 onValueChangeFinished = { onEvent(AppEvent.DialChanged(it)) },
                 accentColor = accentColor,
-                enabled = uiState.currentFeature != null
+                enabled = uiState.currentFeature != null && uiState.features[uiState.currentFeature]?.enabled == true
             )
             Image(painter = painterResource(id = R.drawable.dog), contentDescription = "Dog")
         }

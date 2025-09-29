@@ -188,12 +188,20 @@ class MainViewModel @Inject constructor(
 
     private fun onFeatureToggled(feature: Feature) {
         viewModelScope.launch {
-            val currentFeature = _uiState.value.currentFeature
-            if (currentFeature != feature) {
-                updateCurrentFeature(feature)
-            } else {
+            val uiState = _uiState.value
+            val currentFeature = uiState.currentFeature
+            val featureState = uiState.features[feature] ?: return@launch
+
+            if (currentFeature == feature) {
                 if (!toggleFeature(feature)) {
                     _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
+                }
+            } else {
+                updateCurrentFeature(feature)
+                if (!featureState.enabled) {
+                    if (!toggleFeature(feature)) {
+                        _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
+                    }
                 }
             }
         }
@@ -271,17 +279,14 @@ class MainViewModel @Inject constructor(
         if (!sendControlPacket(feature, levelToSend)) return@withContext false
 
         _uiState.update {
-            val mainUpdate =
-                feature to currentState.copy(enabled = shouldTurnOn, level = levelToSend)
-            val subUpdates =
-                if (feature is MainFeature && !shouldTurnOn) {
-                    feature.subFeatures.associateWith { sub ->
-                        (it.features[sub] ?: FeatureState())
-                            .copy(enabled = false, level = 0)
-                    }
-                } else {
-                    emptyMap()
+            val mainUpdate = feature to currentState.copy(level = levelToSend)
+            val subUpdates = if (feature is MainFeature && !shouldTurnOn) {
+                feature.subFeatures.associateWith { sub ->
+                    (it.features[sub] ?: FeatureState()).copy(level = 0)
                 }
+            } else {
+                emptyMap()
+            }
 
             it.copy(features = it.features + mainUpdate + subUpdates)
         }
@@ -531,14 +536,10 @@ class MainViewModel @Inject constructor(
     private fun updateFeaturesFromStatusInfo(status: ParsedPacket.StatusInfo) {
         _uiState.update {
             val updated = it.features.toMutableMap()
-            updated[MainFeature.Film] =
-                FeatureState(enabled = status.filmStatus > 0, level = status.filmStatus)
-            updated[MainFeature.Fan] =
-                FeatureState(enabled = status.fanStatus > 0, level = status.fanStatus)
-            updated[MainFeature.Heater] =
-                FeatureState(enabled = status.heaterStatus > 0, level = status.heaterStatus)
-            updated[MainFeature.Audio] =
-                FeatureState(enabled = status.isAudioPlaying, level = status.volume)
+            updated[MainFeature.Film] = FeatureState(level = status.filmStatus)
+            updated[MainFeature.Fan] = FeatureState(level = status.fanStatus)
+            updated[MainFeature.Heater] = FeatureState(level = status.heaterStatus)
+            updated[MainFeature.Audio] = FeatureState(level = status.volume)
 
             it.copy(
                 features = updated,
