@@ -83,7 +83,7 @@ class MainViewModel @Inject constructor(
 
     companion object {
         private const val CONNECT_TIMEOUT_MS = 5000L
-        private const val MAX_FRAME_DATA = 2000
+        private const val MAX_FRAME_DATA = 2048
         private const val ACK_TIMEOUT_MS = 10_000L
     }
 
