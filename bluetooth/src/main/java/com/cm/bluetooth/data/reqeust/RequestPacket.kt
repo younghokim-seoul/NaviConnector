@@ -15,7 +15,7 @@ abstract class RequestPacket(private val cmd: Int) {
      */
     fun toByteArray(): ByteArray {
         val d = data()
-        require(d.size in 0..2048) { "Data length out of range (0..2048)" }
+        require(d.size in 0..2052) { "Data length out of range (0..2052)" }
 
         val payload = ByteArray(1 + d.size)
         payload[0] = cmd.toByte()
