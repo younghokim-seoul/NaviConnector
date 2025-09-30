@@ -563,7 +563,7 @@ class MainViewModel @Inject constructor(
             }
 
             is ParsedPacket.StatusInfo -> {
-                updateFeaturesFromStatusInfo(packet)
+                updateFeaturesFromStatusInfo(packet) // TODO: 배터리 low 상태일 때, statusInfo로 업데이트
             }
 
             is ParsedPacket.Ack -> {
