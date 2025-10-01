@@ -8,14 +8,13 @@ import java.nio.charset.Charset
 
 object NabiParser {
     fun parse(packet: ByteArray): NabiPacket {
-        Timber.tag("packet").d("NabiParser: packet to hex: ${packet.toHex()}")
-
         val len = ((packet[1].toInt() and 0xFF) shl 8) or (packet[2].toInt() and 0xFF)
         val cmd = packet[3]
         val data = if (len > 0) packet.copyOfRange(4, 4 + len) else byteArrayOf()
         val crcReceived =
             ((packet[4 + len].toInt() and 0xFF) shl 8) or (packet[5 + len].toInt() and 0xFF)
 
+        Timber.tag("packet").d("NabiParser: cmd: $cmd, packet to hex: ${packet.toHex()}")
 
         // CRC 검증
         val crcCalculated = ModbusCrc.compute(packet.copyOfRange(3, 4 + len))

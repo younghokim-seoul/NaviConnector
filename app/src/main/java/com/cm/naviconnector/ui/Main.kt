@@ -184,7 +184,7 @@ fun MainScreen(
                 value = level,
                 onValueChangeFinished = { onEvent(AppEvent.DialChanged(it)) },
                 accentColor = accentColor,
-                enabled = uiState.currentFeature != null && uiState.features[uiState.currentFeature]?.enabled == true
+                enabled = uiState.isConnected && uiState.currentFeature != null
             )
             Image(painter = painterResource(id = R.drawable.dog), contentDescription = "Dog")
         }
@@ -269,7 +269,7 @@ fun MainFeatures(
                             Label(
                                 text = subFeature.id,
                                 tint = if (subFeatureEnabled) activeColor else inactiveColor,
-                                onClick = { onEvent(AppEvent.FeatureToggled(subFeature)) }
+                                onClick = { onEvent(AppEvent.FeatureSelected(subFeature)) }
                             )
                         }
                     }
@@ -281,7 +281,7 @@ fun MainFeatures(
 
                 CircleButton(
                     painter = painterResource(id = mainFeature.icon),
-                    onClick = { onEvent(AppEvent.FeatureToggled(mainFeature)) },
+                    onClick = { onEvent(AppEvent.FeatureSelected(mainFeature)) },
                     tint = tint,
                     enabled = uiState.isConnected
                 )

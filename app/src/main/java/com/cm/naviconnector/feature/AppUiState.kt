@@ -18,3 +18,20 @@ data class AppUiState(
     val isPowerOn
         get() = isConnected && features.values.any { it.enabled }
 }
+
+fun AppUiState.withFeatureLevel(
+    feature: Feature,
+    newLevel: Int,
+): AppUiState {
+    val current = features[feature] ?: return this
+    return copy(features = features + (feature to current.copy(level = newLevel)))
+}
+
+fun AppUiState.withAllFeaturesEnabled(
+    enabled: Boolean,
+): AppUiState {
+    val updated = features.mapValues { (_, state) ->
+        state.copy(enabled = enabled)
+    }
+    return copy(features = updated)
+}

@@ -38,6 +38,8 @@ import com.cm.naviconnector.feature.control.PlaylistItem
 import com.cm.naviconnector.feature.control.SubFeature
 import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.feature.upload.UploadState
+import com.cm.naviconnector.feature.withAllFeaturesEnabled
+import com.cm.naviconnector.feature.withFeatureLevel
 import com.cm.naviconnector.util.commandByte
 import com.cm.naviconnector.util.scaleFrom
 import com.cm.naviconnector.util.scaleTo
@@ -57,8 +59,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -129,31 +129,14 @@ class MainViewModel @Inject constructor(
                 }
             }
 
-            is AppEvent.FeatureToggled -> {
-                onFeatureToggled(event.feature)
+            is AppEvent.FeatureSelected -> {
+                updateCurrentFeature(event.feature)
             }
 
             is AppEvent.DialChanged -> {
                 val currentFeature = _uiState.value.currentFeature ?: return
                 val newLevel = event.level
-
-                viewModelScope.launch {
-                    val isSuccess = sendControlPacket(currentFeature, newLevel)
-                    if (isSuccess) {
-                        _uiState.update { // TODO: feature 업데이트 하는 로직을 한 곳으로
-                            val newFeatures = it.features.toMutableMap()
-                            val currentFeatureState = newFeatures[currentFeature]
-                            if (currentFeatureState != null && currentFeatureState.enabled) {
-                                newFeatures[currentFeature] =
-                                    currentFeatureState.copy(level = newLevel)
-                            }
-                            it.copy(features = newFeatures)
-                        }
-                        dataStoreRepository.saveFeatureLevel(currentFeature, newLevel)
-                    } else {
-                        _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
-                    }
-                }
+                setFeatureLevel(currentFeature, newLevel)
             }
 
             is AppEvent.DeviceConnectClicked -> {
@@ -193,34 +176,13 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun onFeatureToggled(feature: Feature) {
-        viewModelScope.launch {
-            val uiState = _uiState.value
-            val currentFeature = uiState.currentFeature
-            val featureState = uiState.features[feature] ?: return@launch
-
-            if (currentFeature == feature) {
-                if (!toggleFeature(feature)) {
-                    _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
-                }
-            } else {
-                updateCurrentFeature(feature)
-                if (!featureState.enabled) {
-                    if (!toggleFeature(feature)) {
-                        _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
-                    }
-                }
-            }
-        }
-    }
-
     private fun updateCurrentFeature(feature: Feature) {
         _uiState.update { it.copy(currentFeature = feature) }
     }
 
     private fun connectDevice(device: BluetoothDevice) {
         viewModelScope.launch(Dispatchers.IO) {
-            val connected = runCatching {
+            val isConnected = runCatching {
                 withTimeout(CONNECT_TIMEOUT_MS) {
                     bluetoothClient.connect(device, uuid).await()
                     bluetoothConnection != null
@@ -233,75 +195,26 @@ class MainViewModel @Inject constructor(
                 }
             }
 
-            if (connected) {
-                // TODO: collectConnectionState로 처리 가능한지 확인 필요
-                _uiState.update { it.copy(isConnected = true) }
-                _effects.sendAll(
-                    AppEffect.SetDeviceDialogVisible(false),
-                    AppEffect.ShowToast("장치에 연결되었습니다")
-                )
-            } else {
-                _effects.send(AppEffect.ShowToast("장치 연결에 실패했습니다"))
-            }
+            _uiState.update { it.copy(isConnected = isConnected) }
         }
     }
 
     private fun onPowerButtonClick() {
         val isPowerOn = _uiState.value.isPowerOn
-        toggleAllFeatures(!isPowerOn)
-        if (!isPowerOn) {
-            updateCurrentFeature(MainFeature.Fan)
-        }
+        setPowerMode(!isPowerOn)
     }
 
-    private fun toggleAllFeatures(enabled: Boolean) {
-        viewModelScope.launch {
-            if (enabled) {
-                for (feature in MainFeature.mainFeatures) {
-                    val currentState = _uiState.value.features[feature]
-                    if (currentState?.enabled == false) {
-                        toggleFeature(feature)
-                    }
-                }
-            } else {
-                for (feature in MainFeature.allFeatures) {
-                    val currentState = _uiState.value.features[feature]
-                    if (currentState?.enabled == true) {
-                        toggleFeature(feature)
-                    }
-                }
-            }
-        }
-    }
-
-    private suspend fun toggleFeature(feature: Feature): Boolean = withContext(Dispatchers.IO) {
-        val currentState = _uiState.value.features[feature] ?: return@withContext false
-        val shouldTurnOn = !currentState.enabled
-        val levelToSend = if (shouldTurnOn) {
-            if (feature == SubFeature.Random) { // TODO: 예외 상황에 대한 데이터 구조 잡기
-                50
-            } else {
-                dataStoreRepository.getFeatureLevel(feature).first() ?: 1
+    private fun setPowerMode(isPowerOn: Boolean) {
+        val level = if (isPowerOn) 1 else 0
+        if (isPowerOn) {
+            MainFeature.mainFeatures.forEach { feature ->
+                setFeatureLevel(feature, level)
             }
         } else {
-            0
-        }
-
-        if (!sendControlPacket(feature, levelToSend)) return@withContext false
-
-        _uiState.update {
-            val mainUpdate = feature to currentState.copy(level = levelToSend)
-            val subUpdates = if (feature is MainFeature && !shouldTurnOn) {
-                feature.subFeatures.associateWith { sub ->
-                    (it.features[sub] ?: FeatureState()).copy(level = 0)
-                }
-            } else {
-                emptyMap()
+            MainFeature.allFeatures.forEach { feature ->
+                setFeatureLevel(feature, level)
             }
-
-            it.copy(features = it.features + mainUpdate + subUpdates)
         }
-        true
     }
 
     private fun showDeviceDialog() {
@@ -329,7 +242,7 @@ class MainViewModel @Inject constructor(
                 onSuccess = { it },
                 onFailure = { e ->
                     if (e is CancellationException) throw e
-                    Timber.e(e, "upload failed")
+                    Timber.e(e, "Upload failed")
                     false
                 }
             )
@@ -394,7 +307,7 @@ class MainViewModel @Inject constructor(
             val audioPacket =
                 if (isPlaying) PlayAudioRequest(selectedFileName) else StopAudioRequest()
             if (!sendRequestAndWaitForAck(audioPacket)) {
-                _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
+                showCommandFailedToast()
             }
         }
     }
@@ -484,7 +397,6 @@ class MainViewModel @Inject constructor(
                     when (state) {
                         BluetoothAdapter.STATE_DISCONNECTED -> {
                             resetUiState()
-                            _effects.trySend(AppEffect.ShowToast("장치와 연결이 해제되었습니다"))
                         }
 
                         else -> Unit
@@ -506,9 +418,9 @@ class MainViewModel @Inject constructor(
                         emptyFlow()
                     }
                 }
-                .catch { e -> Timber.e(e, "received failed") }
+                .catch { e -> Timber.e(e, "Received failed") }
                 .collect { packet ->
-                    Timber.d("received packet: $packet")
+                    Timber.tag("packet").d("Received packet: $packet")
                     handlePacket(packet)
                 }
         }
@@ -518,8 +430,22 @@ class MainViewModel @Inject constructor(
         uiState
             .map { it.isConnected }
             .distinctUntilChanged()
-            .filter { it }
-            .onEach { getDeviceAudioList() }
+            .onEach {
+                Timber.d("isConnected: $it")
+                _uiState.update { state ->
+                    state.withAllFeaturesEnabled(it)
+                }
+
+                if (it) {
+                    _effects.sendAll(
+                        AppEffect.SetDeviceDialogVisible(false),
+                        AppEffect.ShowToast("장치에 연결되었습니다")
+                    )
+                    getDeviceAudioList()
+                } else {
+                    _effects.send(AppEffect.ShowToast("장치 연결에 실패했습니다"))
+                }
+            }
             .launchIn(viewModelScope)
     }
 
@@ -583,10 +509,13 @@ class MainViewModel @Inject constructor(
     private fun updateFeaturesFromStatusInfo(status: ParsedPacket.StatusInfo) {
         _uiState.update {
             val updated = it.features.toMutableMap()
-            updated[MainFeature.Heater] = FeatureState(level = scaleFrom(status.heaterStatus))
-            updated[MainFeature.Audio] = FeatureState(level = status.volume)
-            updated[MainFeature.Fan] = FeatureState(level = scaleFrom(status.fanStatus))
-            updated[MainFeature.Film] = FeatureState(level = scaleFrom(status.filmStatus))
+            updated[MainFeature.Heater] =
+                FeatureState(enabled = true, level = scaleFrom(status.heaterStatus))
+            updated[MainFeature.Audio] = FeatureState(enabled = true, level = status.volume)
+            updated[MainFeature.Fan] =
+                FeatureState(enabled = true, level = scaleFrom(status.fanStatus))
+            updated[MainFeature.Film] =
+                FeatureState(enabled = true, level = scaleFrom(status.filmStatus))
 
             it.copy(
                 features = updated,
@@ -597,5 +526,21 @@ class MainViewModel @Inject constructor(
 
     private fun resetUiState() {
         _uiState.value = AppUiState()
+    }
+
+    private fun setFeatureLevel(feature: Feature, newLevel: Int) {
+        viewModelScope.launch {
+            val isSuccess = sendControlPacket(feature, newLevel)
+            if (isSuccess) {
+                _uiState.update { it.withFeatureLevel(feature, newLevel) }
+                dataStoreRepository.saveFeatureLevel(feature, newLevel)
+            } else {
+                showCommandFailedToast()
+            }
+        }
+    }
+
+    private fun showCommandFailedToast() {
+        _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
     }
 }
