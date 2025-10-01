@@ -23,6 +23,7 @@ import com.cm.bluetooth.data.reqeust.UploadStartRequest
 import com.cm.bluetooth.data.response.InvalidPacket
 import com.cm.bluetooth.data.response.NabiPacket
 import com.cm.bluetooth.data.response.ParsedPacket
+import com.cm.bluetooth.data.toHex
 import com.cm.naviconnector.data.DataStoreRepository
 import com.cm.naviconnector.feature.AppEffect
 import com.cm.naviconnector.feature.AppEvent
@@ -134,8 +135,6 @@ class MainViewModel @Inject constructor(
 
             is AppEvent.DialChanged -> {
                 val currentFeature = _uiState.value.currentFeature ?: return
-                if (_uiState.value.features[currentFeature]?.enabled != true) return
-
                 val newLevel = event.level
 
                 viewModelScope.launch {
@@ -425,6 +424,8 @@ class MainViewModel @Inject constructor(
         timeout: Long = ACK_TIMEOUT_MS
     ): Boolean = withContext(Dispatchers.IO) {
         Timber.d("sendRequestAndWaitForAck: packet: $packet")
+        val byteArray = packet.toByteArray()
+        Timber.d("sendRequestAndWaitForAck: packet to hex: ${byteArray.toHex()}")
 
         val command = packet.commandByte() ?: run {
             Timber.e("sendRequestAndWaitForAck: Unknown packet type: $packet")
@@ -438,7 +439,7 @@ class MainViewModel @Inject constructor(
         }
 
         try {
-            val sent = bluetoothConnection?.sendPacket(packet.toByteArray()) == true
+            val sent = bluetoothConnection?.sendPacket(byteArray) == true
             if (!sent) {
                 Timber.e("sendRequestAndWaitForAck: sendPacket failed for command $command")
                 return@withContext false

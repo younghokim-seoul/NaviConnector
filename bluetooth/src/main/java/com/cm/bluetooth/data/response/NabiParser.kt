@@ -2,11 +2,13 @@ package com.cm.bluetooth.data.response
 
 import com.cm.bluetooth.data.reqeust.CMD
 import com.cm.bluetooth.data.reqeust.ModbusCrc
+import com.cm.bluetooth.data.toHex
+import timber.log.Timber
 import java.nio.charset.Charset
 
 object NabiParser {
     fun parse(packet: ByteArray): NabiPacket {
-
+        Timber.tag("packet").d("NabiParser: packet to hex: ${packet.toHex()}")
 
         val len = ((packet[1].toInt() and 0xFF) shl 8) or (packet[2].toInt() and 0xFF)
         val cmd = packet[3]
