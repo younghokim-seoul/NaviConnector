@@ -1,5 +1,6 @@
 package com.cm.naviconnector.feature
 
+import com.cm.naviconnector.feature.control.ControlState
 import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.FeatureState
 import com.cm.naviconnector.feature.control.MainFeature
@@ -25,6 +26,14 @@ fun AppUiState.withFeatureLevel(
 ): AppUiState {
     val current = features[feature] ?: return this
     return copy(features = features + (feature to current.copy(level = level)))
+}
+
+fun AppUiState.withFeatureControlState(
+    feature: Feature,
+    controlState: ControlState,
+): AppUiState {
+    val current = features[feature] ?: return this
+    return copy(features = features + (feature to current.copy(controlState = controlState)))
 }
 
 fun AppUiState.withAllFeaturesEnabled(

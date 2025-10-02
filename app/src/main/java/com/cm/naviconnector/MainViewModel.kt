@@ -31,6 +31,7 @@ import com.cm.naviconnector.feature.AppUiState
 import com.cm.naviconnector.feature.audio.AudioFile
 import com.cm.naviconnector.feature.audio.AudioRepository
 import com.cm.naviconnector.feature.control.BottomButtonType
+import com.cm.naviconnector.feature.control.ControlState
 import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.FeatureState
 import com.cm.naviconnector.feature.control.MainFeature
@@ -39,6 +40,7 @@ import com.cm.naviconnector.feature.control.SubFeature
 import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.feature.upload.UploadState
 import com.cm.naviconnector.feature.withAllFeaturesEnabled
+import com.cm.naviconnector.feature.withFeatureControlState
 import com.cm.naviconnector.feature.withFeatureLevel
 import com.cm.naviconnector.util.commandByte
 import com.cm.naviconnector.util.scaleFrom
@@ -538,14 +540,23 @@ class MainViewModel @Inject constructor(
         _uiState.value = AppUiState()
     }
 
-    private fun setFeatureLevel(feature: Feature, newLevel: Int) {
+    private fun setFeatureLevel(feature: Feature, level: Int) {
         viewModelScope.launch {
-            val isSuccess = sendControlPacket(feature, newLevel)
-            if (isSuccess) {
-                _uiState.update { it.withFeatureLevel(feature, newLevel) }
-                dataStoreRepository.saveFeatureLevel(feature, newLevel)
-            } else {
-                showCommandFailedToast()
+            if (_uiState.value.features[feature]?.controlState is ControlState.Loading) {
+                return@launch
+            }
+
+            try {
+                _uiState.update { it.withFeatureControlState(feature, ControlState.Loading) }
+                val isSuccess = sendControlPacket(feature, level)
+                if (isSuccess) {
+                    _uiState.update { it.withFeatureLevel(feature, level) }
+                    dataStoreRepository.saveFeatureLevel(feature, level)
+                } else {
+                    showCommandFailedToast()
+                }
+            } finally {
+                _uiState.update { it.withFeatureControlState(feature, ControlState.Idle) }
             }
         }
     }
@@ -557,9 +568,7 @@ class MainViewModel @Inject constructor(
     private suspend fun getFeatureLevel() {
         MainFeature.allFeatures.forEach { feature ->
             dataStoreRepository.getFeatureLevel(feature).firstOrNull()?.let { level ->
-                _uiState.update {
-                    it.withFeatureLevel(feature = feature, level = level)
-                }
+                setFeatureLevel(feature, level)
             }
         }
     }
