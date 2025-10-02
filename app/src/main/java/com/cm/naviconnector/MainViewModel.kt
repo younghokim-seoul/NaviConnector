@@ -88,7 +88,7 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
-        private const val CONNECT_TIMEOUT_MS = 5000L
+        private const val CONNECT_TIMEOUT_MS = 10_000L
         private const val MAX_FRAME_DATA = 2048
         private const val ACK_TIMEOUT_MS = 10_000L
     }
@@ -202,8 +202,7 @@ class MainViewModel @Inject constructor(
 
             Timber.d("isConnected: $isConnected")
             _uiState.update {
-                it.copy(isConnected = isConnected)
-                it.withAllFeaturesEnabled(isConnected)
+                it.copy(isConnected = isConnected).withAllFeaturesEnabled(isConnected)
             }
 
             if (isConnected) {
@@ -488,11 +487,12 @@ class MainViewModel @Inject constructor(
 
                 if (isLow) {
                     _effects.trySend(AppEffect.ShowToast("배터리 잔량이 ${battery}% 남았습니다"))
+                    getDeviceStatusInfo()
                 }
             }
 
             is ParsedPacket.StatusInfo -> {
-                updateFeaturesFromStatusInfo(packet) // TODO: 배터리 low 상태일 때, statusInfo로 업데이트
+                updateFeaturesFromStatusInfo(packet)
             }
 
             is ParsedPacket.Ack -> {
@@ -532,7 +532,7 @@ class MainViewModel @Inject constructor(
 
     private fun setFeatureLevel(feature: Feature, level: Int) {
         viewModelScope.launch {
-            if (_uiState.value.features[feature]?.controlState is ControlState.Loading) {
+            if (_uiState.value.features[feature]?.isLoading == true) {
                 return@launch
             }
 
