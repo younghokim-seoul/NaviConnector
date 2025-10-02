@@ -59,6 +59,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -66,6 +67,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
@@ -101,6 +104,7 @@ class MainViewModel @Inject constructor(
     val playlist: StateFlow<List<PlaylistItem>> = _playlist
 
     private val ackWaiters = ConcurrentHashMap<Byte, CompletableDeferred<ParsedPacket.Ack>>()
+    private val sendMutex = Mutex()
 
     val audioPaging: Flow<PagingData<AudioFile>> =
         audioRepository
@@ -336,37 +340,42 @@ class MainViewModel @Inject constructor(
         packet: RequestPacket,
         timeout: Long = ACK_TIMEOUT_MS
     ): Boolean = withContext(Dispatchers.IO) {
-        Timber.d("sendRequestAndWaitForAck: packet: $packet")
-        val byteArray = packet.toByteArray()
-        Timber.d("sendRequestAndWaitForAck: packet to hex: ${byteArray.toHex()}")
+        sendMutex.withLock {
+            Timber.d("sendRequestAndWaitForAck: packet: $packet")
+            val byteArray = packet.toByteArray()
+            Timber.d("sendRequestAndWaitForAck: packet to hex: ${byteArray.toHex()}")
 
-        val command = packet.commandByte() ?: run {
-            Timber.e("sendRequestAndWaitForAck: Unknown packet type: $packet")
-            return@withContext false
-        }
-        val deferred = CompletableDeferred<ParsedPacket.Ack>()
+            val command = packet.commandByte() ?: run {
+                Timber.e("sendRequestAndWaitForAck: Unknown packet type: $packet")
+                return@withLock false
+            }
+            val deferred = CompletableDeferred<ParsedPacket.Ack>()
 
-        if (ackWaiters.putIfAbsent(command, deferred) != null) {
-            Timber.w("sendRequestAndWaitForAck: Concurrent request for command $command. Failing.")
-            return@withContext false
-        }
-
-        try {
-            val sent = bluetoothConnection?.sendPacket(byteArray) == true
-            if (!sent) {
-                Timber.e("sendRequestAndWaitForAck: sendPacket failed for command $command")
-                return@withContext false
+            if (ackWaiters.putIfAbsent(command, deferred) != null) {
+                Timber.w("sendRequestAndWaitForAck: Concurrent request for command $command. Failing.")
+                return@withLock false
             }
 
-            withTimeout(timeout) {
-                val ack = deferred.await()
-                ack.command == command
+            try {
+                val sent = bluetoothConnection?.sendPacket(byteArray) == true
+                if (!sent) {
+                    Timber.e("sendRequestAndWaitForAck: sendPacket failed for command $command")
+                    return@withLock false
+                }
+
+                withTimeout(timeout) {
+                    val ack = deferred.await()
+                    ack.command == command
+                }
+            } catch (e: TimeoutCancellationException) {
+                Timber.e(
+                    e,
+                    "sendRequestAndWaitForAck: timed out waiting for ACK for command $command"
+                )
+                false
+            } finally {
+                ackWaiters.remove(command, deferred)
             }
-        } catch (e: TimeoutCancellationException) {
-            Timber.e(e, "sendRequestAndWaitForAck: timed out waiting for ACK for command $command")
-            false
-        } finally {
-            ackWaiters.remove(command, deferred)
         }
     }
 
@@ -442,6 +451,7 @@ class MainViewModel @Inject constructor(
                         AppEffect.ShowToast("장치에 연결되었습니다")
                     )
                     getDeviceAudioList()
+                    getFeatureLevel()
                 } else {
                     _effects.send(AppEffect.ShowToast("장치 연결에 실패했습니다"))
                 }
@@ -542,5 +552,15 @@ class MainViewModel @Inject constructor(
 
     private fun showCommandFailedToast() {
         _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
+    }
+
+    private suspend fun getFeatureLevel() {
+        MainFeature.allFeatures.forEach { feature ->
+            dataStoreRepository.getFeatureLevel(feature).firstOrNull()?.let { level ->
+                _uiState.update {
+                    it.withFeatureLevel(feature = feature, level = level)
+                }
+            }
+        }
     }
 }

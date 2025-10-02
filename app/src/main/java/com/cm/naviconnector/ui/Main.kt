@@ -264,11 +264,11 @@ fun MainFeatures(
                     if (isSelected) {
                         mainFeature.subFeatures.forEach { subFeature ->
                             val subFeatureState = uiState.features[subFeature]
-                            val subFeatureEnabled = subFeatureState?.enabled == true
+                            val isActive = subFeatureState?.isActive == true
 
                             Label(
                                 text = subFeature.id,
-                                tint = if (subFeatureEnabled) activeColor else inactiveColor,
+                                tint = if (isActive) activeColor else inactiveColor,
                                 onClick = { onEvent(AppEvent.FeatureSelected(subFeature)) }
                             )
                         }
@@ -277,13 +277,13 @@ fun MainFeatures(
 
                 val featureState = uiState.features[mainFeature]
                 val enabled = featureState?.enabled == true
-                val tint = if (enabled) activeColor else inactiveColor
+                val tint = if (featureState?.isActive == true) activeColor else inactiveColor
 
                 CircleButton(
                     painter = painterResource(id = mainFeature.icon),
                     onClick = { onEvent(AppEvent.FeatureSelected(mainFeature)) },
                     tint = tint,
-                    enabled = uiState.isConnected
+                    enabled = enabled
                 )
             }
         }

@@ -16,15 +16,15 @@ data class AppUiState(
     val playerState: PlayerState = PlayerState()
 ) {
     val isPowerOn
-        get() = isConnected && features.values.any { it.enabled }
+        get() = isConnected && features.values.any { it.isActive }
 }
 
 fun AppUiState.withFeatureLevel(
     feature: Feature,
-    newLevel: Int,
+    level: Int,
 ): AppUiState {
     val current = features[feature] ?: return this
-    return copy(features = features + (feature to current.copy(level = newLevel)))
+    return copy(features = features + (feature to current.copy(level = level)))
 }
 
 fun AppUiState.withAllFeaturesEnabled(
