@@ -1,6 +1,5 @@
 package com.cm.naviconnector.feature
 
-import com.cm.naviconnector.feature.control.ControlState
 import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.FeatureState
 import com.cm.naviconnector.feature.control.MainFeature
@@ -12,7 +11,7 @@ data class AppUiState(
     val features: Map<Feature, FeatureState> = MainFeature.allFeatures.associateWith { FeatureState() },
     val isConnected: Boolean = false,
     val isLowBattery: Boolean = false,
-    val uploadState: UploadState = UploadState.Idle,
+    val uploadState: UploadState = UploadState.Idle, // TODO: RequestState로 교체
     val selectedFileName: String? = null,
     val playerState: PlayerState = PlayerState()
 ) {
@@ -30,10 +29,10 @@ fun AppUiState.withFeatureLevel(
 
 fun AppUiState.withFeatureControlState(
     feature: Feature,
-    controlState: ControlState,
+    requestState: RequestState,
 ): AppUiState {
     val current = features[feature] ?: return this
-    return copy(features = features + (feature to current.copy(controlState = controlState)))
+    return copy(features = features + (feature to current.copy(requestState = requestState)))
 }
 
 fun AppUiState.withAllFeaturesEnabled(

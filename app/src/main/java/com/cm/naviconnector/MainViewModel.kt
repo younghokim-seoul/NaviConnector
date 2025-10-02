@@ -28,10 +28,10 @@ import com.cm.naviconnector.data.DataStoreRepository
 import com.cm.naviconnector.feature.AppEffect
 import com.cm.naviconnector.feature.AppEvent
 import com.cm.naviconnector.feature.AppUiState
+import com.cm.naviconnector.feature.RequestState
 import com.cm.naviconnector.feature.audio.AudioFile
 import com.cm.naviconnector.feature.audio.AudioRepository
 import com.cm.naviconnector.feature.control.BottomButtonType
-import com.cm.naviconnector.feature.control.ControlState
 import com.cm.naviconnector.feature.control.Feature
 import com.cm.naviconnector.feature.control.FeatureState
 import com.cm.naviconnector.feature.control.MainFeature
@@ -138,8 +138,8 @@ class MainViewModel @Inject constructor(
 
             is AppEvent.DialChanged -> {
                 val currentFeature = _uiState.value.currentFeature ?: return
-                val newLevel = event.level
-                setFeatureLevel(currentFeature, newLevel)
+                val level = event.level
+                setFeatureLevel(currentFeature, level)
             }
 
             is AppEvent.DeviceConnectClicked -> {
@@ -536,7 +536,7 @@ class MainViewModel @Inject constructor(
             }
 
             try {
-                _uiState.update { it.withFeatureControlState(feature, ControlState.Loading) }
+                _uiState.update { it.withFeatureControlState(feature, RequestState.Loading) }
                 val isSuccess = sendControlPacket(feature, level)
                 if (isSuccess) {
                     _uiState.update { it.withFeatureLevel(feature, level) }
@@ -545,7 +545,7 @@ class MainViewModel @Inject constructor(
                     showCommandFailedToast(feature.toString())
                 }
             } finally {
-                _uiState.update { it.withFeatureControlState(feature, ControlState.Idle) }
+                _uiState.update { it.withFeatureControlState(feature, RequestState.Idle) }
             }
         }
     }

@@ -150,7 +150,10 @@ fun MainScreen(
         TopBar(isLowBattery = uiState.isLowBattery)
         Spacer(modifier = Modifier.height(30.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
             TopButtonType.entries.forEach { buttonType ->
                 val tint = when (buttonType) {
                     TopButtonType.POWER -> if (uiState.isPowerOn) activeColor else inactiveColor
