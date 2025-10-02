@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.core.view.WindowCompat
@@ -25,6 +26,7 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         checkPermissions()
+        setupBackPressedCallback()
 
         setContent {
             NaviConnectorTheme {
@@ -69,5 +71,23 @@ class MainActivity : ComponentActivity() {
                 finish()
             }
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (isFinishing) {
+            viewModel.disconnect()
+        }
+    }
+
+    private fun setupBackPressedCallback() {
+        onBackPressedDispatcher.addCallback(
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    viewModel.disconnect()
+                    finish()
+                }
+            }
+        )
     }
 }

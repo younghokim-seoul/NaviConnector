@@ -562,4 +562,8 @@ class MainViewModel @Inject constructor(
             }
         }
     }
+
+    fun disconnect() {
+        bluetoothClient.closeConnections()
+    }
 }
