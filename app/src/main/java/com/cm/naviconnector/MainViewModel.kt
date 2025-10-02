@@ -121,7 +121,6 @@ class MainViewModel @Inject constructor(
     init {
         observeConnectionState()
         observeBluetoothPackets()
-        initData()
     }
 
     fun onEvent(event: AppEvent) {
@@ -201,7 +200,22 @@ class MainViewModel @Inject constructor(
                 }
             }
 
-            _uiState.update { it.copy(isConnected = isConnected) }
+            Timber.d("isConnected: $isConnected")
+            _uiState.update {
+                it.copy(isConnected = isConnected)
+                it.withAllFeaturesEnabled(isConnected)
+            }
+
+            if (isConnected) {
+                _effects.sendAll(
+                    AppEffect.SetDeviceDialogVisible(false),
+                    AppEffect.ShowToast("장치에 연결되었습니다")
+                )
+                getDeviceAudioList()
+                getFeatureLevel()
+            } else {
+                _effects.trySend(AppEffect.ShowToast("장치 연결에 실패했습니다"))
+            }
         }
     }
 
@@ -435,30 +449,6 @@ class MainViewModel @Inject constructor(
                     handlePacket(packet)
                 }
         }
-    }
-
-    private fun initData() {
-        uiState
-            .map { it.isConnected }
-            .distinctUntilChanged()
-            .onEach {
-                Timber.d("isConnected: $it")
-                _uiState.update { state ->
-                    state.withAllFeaturesEnabled(it)
-                }
-
-                if (it) {
-                    _effects.sendAll(
-                        AppEffect.SetDeviceDialogVisible(false),
-                        AppEffect.ShowToast("장치에 연결되었습니다")
-                    )
-                    getDeviceAudioList()
-                    getFeatureLevel()
-                } else {
-                    _effects.send(AppEffect.ShowToast("장치 연결에 실패했습니다"))
-                }
-            }
-            .launchIn(viewModelScope)
     }
 
     private fun handlePacket(packet: NabiPacket) {
