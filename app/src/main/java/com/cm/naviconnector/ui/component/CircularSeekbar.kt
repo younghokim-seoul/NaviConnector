@@ -1,5 +1,6 @@
 package com.cm.naviconnector.ui.component
 
+import android.animation.ObjectAnimator
 import android.graphics.Paint
 import android.view.View
 import androidx.compose.foundation.layout.Box
@@ -143,7 +144,12 @@ fun CircularSeekbar(
             },
             update = { view ->
                 if (!view.isPressed) {
-                    if (view.progress.toInt() != value) view.progress = value.toFloat()
+                    if (view.progress.toInt() != value) {
+                        ObjectAnimator.ofFloat(view, "progress", value.toFloat()).apply {
+                            duration = 300
+                            start()
+                        }
+                    }
                 }
 
                 view.isEnabled = enabled
