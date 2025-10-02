@@ -131,7 +131,7 @@ fun ColumnScope.DeviceListView(
         ) { index, device ->
             DeviceItem(device = device, onConnectClick = { onConnectClick(device) })
             if (index < devices.lastIndex) {
-                HorizontalDivider()
+                HorizontalDivider(color = Color.LightGray)
             }
         }
     }

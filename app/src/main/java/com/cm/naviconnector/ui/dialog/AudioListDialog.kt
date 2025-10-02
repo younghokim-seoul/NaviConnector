@@ -136,7 +136,7 @@ fun ColumnScope.AudioFileListView(
                     audioFile = audioFile,
                     onUploadClick = { onUploadClick(audioFile) })
                 if (index < audioFiles.itemCount - 1) {
-                    HorizontalDivider()
+                    HorizontalDivider(color = Color.LightGray)
                 }
             }
         }
