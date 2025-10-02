@@ -63,9 +63,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -326,7 +324,8 @@ class MainViewModel @Inject constructor(
             val audioPacket =
                 if (isPlaying) PlayAudioRequest(selectedFileName) else StopAudioRequest()
             if (!sendRequestAndWaitForAck(audioPacket)) {
-                showCommandFailedToast()
+                val command = if (isPlaying) "재생" else "정지"
+                showCommandFailedToast("오디오 $command")
             }
         }
     }
@@ -543,7 +542,7 @@ class MainViewModel @Inject constructor(
                     _uiState.update { it.withFeatureLevel(feature, level) }
                     dataStoreRepository.saveFeatureLevel(feature, level)
                 } else {
-                    showCommandFailedToast()
+                    showCommandFailedToast(feature.toString())
                 }
             } finally {
                 _uiState.update { it.withFeatureControlState(feature, ControlState.Idle) }
@@ -551,8 +550,9 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun showCommandFailedToast() {
-        _effects.trySend(AppEffect.ShowToast("명령 전송에 실패했습니다"))
+    private fun showCommandFailedToast(command: String) {
+        val message = "명령 전송에 실패했습니다: $command"
+        _effects.trySend(AppEffect.ShowToast(message))
     }
 
     private suspend fun getFeatureLevel() {

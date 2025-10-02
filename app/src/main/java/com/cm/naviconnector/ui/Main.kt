@@ -3,6 +3,7 @@ package com.cm.naviconnector.ui
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,14 +44,15 @@ import com.cm.naviconnector.feature.control.TopButtonType
 import com.cm.naviconnector.feature.upload.UploadState
 import com.cm.naviconnector.ui.component.CircleButton
 import com.cm.naviconnector.ui.component.CircularSeekbar
+import com.cm.naviconnector.ui.component.Label
 import com.cm.naviconnector.ui.component.PlaylistPanel
 import com.cm.naviconnector.ui.component.RectangleButton
-import com.cm.naviconnector.ui.component.Label
 import com.cm.naviconnector.ui.component.TopBar
 import com.cm.naviconnector.ui.dialog.AudioListDialog
 import com.cm.naviconnector.ui.dialog.DeviceListDialog
 import com.cm.naviconnector.ui.dialog.UploadProgressDialog
 import com.cm.naviconnector.ui.theme.LightGrayishBlue
+import com.cm.naviconnector.ui.theme.LightPurple
 import com.cm.naviconnector.ui.theme.Navy
 
 @Composable
@@ -278,13 +281,23 @@ fun MainFeatures(
                 val featureState = uiState.features[mainFeature]
                 val enabled = featureState?.enabled == true
                 val tint = if (featureState?.isActive == true) activeColor else inactiveColor
+                val isLoading = featureState?.isLoading == true
 
-                CircleButton(
-                    painter = painterResource(id = mainFeature.icon),
-                    onClick = { onEvent(AppEvent.FeatureSelected(mainFeature)) },
-                    tint = tint,
-                    enabled = enabled
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    CircleButton(
+                        painter = painterResource(id = mainFeature.icon),
+                        onClick = { onEvent(AppEvent.FeatureSelected(mainFeature)) },
+                        tint = tint,
+                        enabled = enabled && !isLoading
+                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            color = LightPurple,
+                            strokeWidth = 3.dp
+                        )
+                    }
+                }
             }
         }
     }
